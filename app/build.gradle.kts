@@ -1,8 +1,28 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
+
+val signingProperties = Properties().apply {
+    val file = rootProject.file("signing.properties")
+    if (file.isFile) {
+        file.inputStream().use(::load)
+    }
+}
+
+fun signingValue(key: String, env: String): String? =
+    providers.environmentVariable(env).orNull?.takeIf { it.isNotBlank() }
+        ?: signingProperties.getProperty(key)?.takeIf { it.isNotBlank() }
+
+val releaseStoreFile = signingValue("storeFile", "RELEASE_KEYSTORE_PATH")?.let { rootProject.file(it) }
+val releaseStorePassword = signingValue("storePassword", "RELEASE_KEYSTORE_PASSWORD")
+val releaseKeyAlias = signingValue("keyAlias", "RELEASE_KEY_ALIAS")
+val releaseKeyPassword = signingValue("keyPassword", "RELEASE_KEY_PASSWORD")
+val hasCustomReleaseSigning = releaseStoreFile?.isFile == true &&
+    releaseStorePassword != null && releaseKeyAlias != null && releaseKeyPassword != null
 
 android {
     namespace = "com.example.deepseekwidget"
@@ -18,6 +38,19 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        if (hasCustomReleaseSigning) {
+            create("release") {
+                storeFile = releaseStoreFile
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+                enableV1Signing = false
+                enableV2Signing = true
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -25,6 +58,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = if (hasCustomReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
         debug {
             applicationIdSuffix = ".debug"
