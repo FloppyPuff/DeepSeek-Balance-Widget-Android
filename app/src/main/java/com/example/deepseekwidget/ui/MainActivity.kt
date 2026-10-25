@@ -150,6 +150,7 @@ fun MainScreen(viewModel: MainViewModel) {
             WidgetPreviewSection(
                 uiState = uiState,
                 onToggleMode = { viewModel.togglePreviewMode() },
+                onToggleSize = { viewModel.togglePreviewSize() },
                 onRefreshClick = { viewModel.testAndFetchBalance() }
             )
 
@@ -466,15 +467,17 @@ fun LiveBalanceCard(data: BalanceData) {
 fun WidgetPreviewSection(
     uiState: MainUiState,
     onToggleMode: () -> Unit,
+    onToggleSize: () -> Unit,
     onRefreshClick: () -> Unit
 ) {
     val context = LocalContext.current
     val isDark = uiState.previewDarkMode
+    val is2x2 = uiState.previewIs2x2
 
     val displaySymbol = uiState.balanceData?.currencySymbol ?: "¥"
-    val displayBalance = uiState.balanceData?.totalBalance ?: "128.45"
-    val displayGranted = uiState.balanceData?.grantedBalance ?: "10.00"
-    val displayToppedUp = uiState.balanceData?.toppedUpBalance ?: "118.45"
+    val displayBalance = uiState.balanceData?.totalBalance ?: "2.43"
+    val displayGranted = uiState.balanceData?.grantedBalance ?: "0.00"
+    val displayToppedUp = uiState.balanceData?.toppedUpBalance ?: "2.43"
 
     // 艺术字 Bitmap 离屏渲染测试
     val previewBitmap = BalanceTypographyRenderer.renderBalanceBitmap(
@@ -500,98 +503,163 @@ fun WidgetPreviewSection(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "桌面小组件视觉预览 (2×1)",
+                    text = "桌面小组件预览 (${if (is2x2) "2×2 方形大卡" else "2×1 紧凑横幅"})",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = ObsidianPrimaryInk
                 )
             }
 
-            IconButton(onClick = onToggleMode) {
-                Icon(
-                    imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
-                    contentDescription = "Toggle Mode",
-                    tint = ObsidianSecondaryInk
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = AccentDeepSeek.copy(alpha = 0.15f),
+                    modifier = Modifier.clickable { onToggleSize() }
+                ) {
+                    Text(
+                        text = if (is2x2) "切到 2×1" else "切到 2×2",
+                        color = AccentDeepSeek,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+
+                IconButton(onClick = onToggleMode) {
+                    Icon(
+                        imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                        contentDescription = "Toggle Mode",
+                        tint = ObsidianSecondaryInk
+                    )
+                }
             }
         }
 
-        // 小组件仿真实体容器
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(130.dp),
-            shape = RoundedCornerShape(22.dp),
-            color = if (isDark) Color(0xE6121316) else Color(0xF2F7F8FA),
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp,
-                if (isDark) Color(0x33FFFFFF) else Color(0x1F000000)
-            )
+        // 小组件仿真实体容器（宽度固定类似 2 列宽度，模拟真实桌面）
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
         ) {
-            Column(
+            Surface(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
+                    .width(if (is2x2) 180.dp else 260.dp)
+                    .height(if (is2x2) 180.dp else 120.dp),
+                shape = RoundedCornerShape(22.dp),
+                color = if (isDark) Color(0xE6121316) else Color(0xF2F7F8FA),
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (isDark) Color(0x33FFFFFF) else Color(0x1F000000)
+                )
             ) {
-                // 1. 顶栏
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
                 ) {
-                    Text(
-                        text = "● ",
-                        color = AccentDeepSeek,
-                        fontSize = 10.sp
-                    )
-                    Text(
-                        text = "DEEPSEEK",
-                        color = if (isDark) Color(0xFF8E95A5) else Color(0xFF636B78),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
+                    // 1. 顶栏：左侧品牌，右侧刷新键，彻底杜绝折行挤压与裁切
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "● ",
+                                color = AccentDeepSeek,
+                                fontSize = 10.sp
+                            )
+                            Text(
+                                text = "DEEPSEEK",
+                                color = if (isDark) Color(0xFF8E95A5) else Color(0xFF636B78),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        if (!is2x2) {
+                            Text(
+                                text = if (uiState.isLoading) "Syncing..." else "23:45",
+                                color = if (isDark) Color(0xFF636B78) else Color(0xFF9EA6B4),
+                                fontSize = 11.sp,
+                                modifier = Modifier.padding(end = 6.dp)
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(if (isDark) Color(0x1AFFFFFF) else Color(0x12000000))
+                                .clickable { onRefreshClick() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_refresh_minimal),
+                                contentDescription = "Refresh",
+                                tint = if (isDark) Color.White else Color(0xFF111318),
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // 2. 核心区：艺术字位图
+                    Image(
+                        bitmap = previewBitmap.asImageBitmap(),
+                        contentDescription = "Balance",
+                        modifier = Modifier.height(if (is2x2) 50.dp else 44.dp)
                     )
 
                     Spacer(modifier = Modifier.weight(1f))
 
-                    Text(
-                        text = if (uiState.isLoading) "Syncing..." else "23:45",
-                        color = if (isDark) Color(0xFF636B78) else Color(0xFF9EA6B4),
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(end = 6.dp)
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(CircleShape)
-                            .background(if (isDark) Color(0x1AFFFFFF) else Color(0x12000000))
-                            .clickable { onRefreshClick() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_refresh_minimal),
-                            contentDescription = "Refresh",
-                            tint = if (isDark) Color.White else Color(0xFF111318),
-                            modifier = Modifier.size(14.dp)
+                    // 3. 底栏区域
+                    if (is2x2) {
+                        // 2×2：双列明细 + 独立行时间戳，零文字折叠挤压
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Granted",
+                                    color = if (isDark) Color(0xFF8E95A5) else Color(0xFF636B78),
+                                    fontSize = 10.sp
+                                )
+                                Text(
+                                    text = "$displaySymbol$displayGranted",
+                                    color = if (isDark) Color.White else Color(0xFF111318),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Top-up",
+                                    color = if (isDark) Color(0xFF8E95A5) else Color(0xFF636B78),
+                                    fontSize = 10.sp
+                                )
+                                Text(
+                                    text = "$displaySymbol$displayToppedUp",
+                                    color = if (isDark) Color.White else Color(0xFF111318),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                        Text(
+                            text = if (uiState.isLoading) "● Syncing..." else "Updated 23:45",
+                            color = if (isDark) Color(0xFF636B78) else Color(0xFF9EA6B4),
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    } else {
+                        // 2×1
+                        Text(
+                            text = "Granted: $displaySymbol$displayGranted  |  Top-up: $displaySymbol$displayToppedUp",
+                            color = if (isDark) Color(0xFF636B78) else Color(0xFF9EA6B4),
+                            fontSize = 10.sp
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                // 2. 核心区：艺术字位图
-                Image(
-                    bitmap = previewBitmap.asImageBitmap(),
-                    contentDescription = "Balance",
-                    modifier = Modifier.height(48.dp)
-                )
-
-                // 3. 底栏副文案
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = "Granted: $displaySymbol$displayGranted  |  Top-up: $displaySymbol$displayToppedUp",
-                    color = if (isDark) Color(0xFF636B78) else Color(0xFF9EA6B4),
-                    fontSize = 10.sp
-                )
             }
         }
     }

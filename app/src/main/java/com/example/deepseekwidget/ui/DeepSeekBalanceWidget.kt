@@ -3,6 +3,7 @@ package com.example.deepseekwidget.ui
 import android.content.Context
 import android.graphics.Color
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
@@ -11,9 +12,11 @@ import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.LocalSize
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
@@ -29,6 +32,7 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
+import androidx.glance.layout.width
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
@@ -42,14 +46,16 @@ import com.example.deepseekwidget.ui.render.BalanceTypographyRenderer
  * DeepSeek 余额监控小组件（Jetpack Glance）
  *
  * 设计定位：极简主义（Minimalism）、高对比度排版（Editorial Typography）、零冗余交互。
- * 布局结构：
- * - 顶栏：状态指示灯 (●) + 品牌标识 (DEEPSEEK) + 更新时间/同步中 + 独立无序刷新键 [↻]
- * - 核心区：离屏 Canvas 矢量化位图艺术字体渲染（¥ 128.45）
- * - 底栏：副文案胶囊标签（Granted: ¥10.00 | Top-up: ¥118.45）
+ * 自适应响应：
+ * - 2×1（紧凑横幅）：单行顶栏（品牌+刷新键），核心艺术字，底部紧凑更新状态。
+ * - 2×2（方形大卡）：顶栏极简放宽防挤压（品牌与独立刷新键，绝无溢出裁切），中部超大艺术字，
+ *   底部双列清晰展示 Granted 与 Top-up 明细，并在独立行标注更新时间，彻底告别单行文字折行挤压。
+ * - 3×1 / 4×1 / 3×2（宽屏尺寸）：展开展示完整品牌、更新时间、胶囊明细。
  */
 class DeepSeekBalanceWidget : GlanceAppWidget() {
 
     override val stateDefinition = PreferencesGlanceStateDefinition
+    override val sizeMode: SizeMode = SizeMode.Exact
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val hasKey = SecureKeyStore.isConfigured(context)
@@ -57,9 +63,10 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
         provideContent {
             val prefs = currentState<Preferences>()
             val isConfigured = (prefs[WidgetPrefsKeys.IS_CONFIGURED] ?: false) && hasKey
+            val size = LocalSize.current
 
             if (!isConfigured) {
-                UnconfiguredCard()
+                UnconfiguredCard(size = size)
             } else {
                 val balance = prefs[WidgetPrefsKeys.TOTAL_BALANCE] ?: "--.--"
                 val symbol = prefs[WidgetPrefsKeys.CURRENCY_SYMBOL] ?: "¥"
@@ -70,7 +77,8 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                 val hasError = prefs[WidgetPrefsKeys.HAS_ERROR] ?: false
                 val isLow = prefs[WidgetPrefsKeys.IS_LOW_BALANCE] ?: false
 
-                MinimalistBalanceCard(
+                AdaptiveBalanceCard(
+                    size = size,
                     symbol = symbol,
                     balance = balance,
                     granted = granted,
@@ -85,18 +93,19 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
     }
 
     /**
-     * 未配置状态卡片：引导点击打开主界面输入 API Key
+     * 未配置状态卡片
      */
     @Composable
-    private fun UnconfiguredCard() {
+    private fun UnconfiguredCard(size: DpSize) {
+        val isTall = size.height >= 105.dp
+
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
                 .background(ColorProvider(androidx.compose.ui.graphics.Color(0xE6121316)))
                 .cornerRadius(22.dp)
-                .padding(horizontal = 16.dp, vertical = 14.dp)
-                .clickable(actionStartActivity<MainActivity>()),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 14.dp, vertical = 12.dp)
+                .clickable(actionStartActivity<MainActivity>())
         ) {
             Row(
                 modifier = GlanceModifier.fillMaxWidth(),
@@ -125,29 +134,32 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                 text = "Tap to configure Key",
                 style = TextStyle(
                     color = ColorProvider(androidx.compose.ui.graphics.Color(0xFFFFFFFF)),
-                    fontSize = 16.sp,
+                    fontSize = if (isTall) 16.sp else 14.sp,
                     fontWeight = FontWeight.Medium
                 )
             )
 
-            Text(
-                text = "点击小组件进入应用配置 API Key",
-                style = TextStyle(
-                    color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF8E95A5)),
-                    fontSize = 11.sp
-                ),
-                modifier = GlanceModifier.padding(top = 2.dp)
-            )
+            if (isTall) {
+                Text(
+                    text = "点击小组件进入应用配置 API Key",
+                    style = TextStyle(
+                        color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF8E95A5)),
+                        fontSize = 11.sp
+                    ),
+                    modifier = GlanceModifier.padding(top = 4.dp)
+                )
+            }
 
             Spacer(modifier = GlanceModifier.defaultWeight())
         }
     }
 
     /**
-     * 已配置状态卡片：遵循 80% 视觉重心归于数字、20% 归于状态与交互的极简原则
+     * 自适应尺寸渲染卡片
      */
     @Composable
-    private fun MinimalistBalanceCard(
+    private fun AdaptiveBalanceCard(
+        size: DpSize,
         symbol: String,
         balance: String,
         granted: String?,
@@ -158,8 +170,10 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
         isLowBalance: Boolean
     ) {
         val context = LocalContext.current
+        val isTall = size.height >= 105.dp
+        val isWide = size.width >= 195.dp
 
-        // 生成高分辨率艺术字体 Bitmap
+        // 生成艺术字体 Bitmap
         val balanceBitmap = BalanceTypographyRenderer.renderBalanceBitmap(
             context = context,
             currencySymbol = symbol,
@@ -168,8 +182,6 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
             secondaryColor = Color.parseColor("#8E95A5")
         )
 
-        // 状态指示点颜色逻辑：
-        // 报错或低余额预警时显示红色/警戒色 (#FF5252)，平时显示 DeepSeek 标志性电光蓝 (#4D6BFE)
         val statusDotColor = when {
             hasError || isLowBalance -> androidx.compose.ui.graphics.Color(0xFFFF5252)
             else -> androidx.compose.ui.graphics.Color(0xFF4D6BFE)
@@ -180,56 +192,49 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                 .fillMaxSize()
                 .background(ColorProvider(androidx.compose.ui.graphics.Color(0xE6121316)))
                 .cornerRadius(22.dp)
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .padding(horizontal = 14.dp, vertical = 12.dp)
                 .clickable(actionStartActivity<MainActivity>())
         ) {
-            // 1. 顶部状态栏：品牌名 + 同步状态/时间戳 + 独立刷新热区
+            // 1. 顶部状态栏：根据宽度决定是否在顶栏容纳时间戳，彻底规避 2×2 / 2×1 挤压剪裁
             Row(
                 modifier = GlanceModifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "● ",
-                    style = TextStyle(
-                        color = ColorProvider(statusDotColor),
-                        fontSize = 10.sp
+                // 左侧品牌
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "● ",
+                        style = TextStyle(
+                            color = ColorProvider(statusDotColor),
+                            fontSize = 10.sp
+                        )
                     )
-                )
-                Text(
-                    text = "DEEPSEEK",
-                    style = TextStyle(
-                        color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF8E95A5)),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
+                    Text(
+                        text = "DEEPSEEK",
+                        style = TextStyle(
+                            color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF8E95A5)),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     )
-                )
+                }
 
                 Spacer(modifier = GlanceModifier.defaultWeight())
 
-                Text(
-                    text = if (isLoading) "Syncing..." else updatedAt,
-                    style = TextStyle(
-                        color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF636B78)),
-                        fontSize = 11.sp
-                    ),
-                    modifier = GlanceModifier.padding(end = 6.dp)
-                )
-
-                // 独立刷新按钮热区（28dp 圆形胶囊，内部 14dp 矢量图标，手感极佳）
-                Box(
-                    modifier = GlanceModifier
-                        .size(28.dp)
-                        .cornerRadius(14.dp)
-                        .background(ColorProvider(androidx.compose.ui.graphics.Color(0x1AFFFFFF)))
-                        .clickable(onClick = actionRunCallback<RefreshBalanceAction>()),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        provider = ImageProvider(R.drawable.ic_refresh_minimal),
-                        contentDescription = "Refresh Balance",
-                        modifier = GlanceModifier.size(14.dp)
+                // 仅在宽屏（>=195dp，如 3×1、4×1）时在顶栏显示更新时间
+                if (isWide) {
+                    Text(
+                        text = if (isLoading) "Syncing..." else updatedAt,
+                        style = TextStyle(
+                            color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF636B78)),
+                            fontSize = 11.sp
+                        ),
+                        modifier = GlanceModifier.padding(end = 6.dp)
                     )
                 }
+
+                // 独立刷新按钮（固定 28dp，安全锚定在右边界内部，杜绝裁切）
+                RefreshButton()
             }
 
             Spacer(modifier = GlanceModifier.defaultWeight())
@@ -238,25 +243,123 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
             Image(
                 provider = ImageProvider(balanceBitmap),
                 contentDescription = "Balance $symbol$balance",
-                modifier = GlanceModifier.height(48.dp)
+                modifier = GlanceModifier.height(if (isTall) 50.dp else 44.dp)
             )
 
-            // 3. 底栏副文案（如果有充值与赠送明细，微弱对比度展示）
-            if (!granted.isNullOrBlank() && !toppedUp.isNullOrBlank()) {
+            // 3. 底栏区域：根据尺寸自适应排版
+            if (isTall) {
+                // 2×2 / 3×2 等高尺寸：双列清晰明细 + 独立时间戳，杜绝文字折行重叠
+                Spacer(modifier = GlanceModifier.defaultWeight())
+
+                if (!granted.isNullOrBlank() || !toppedUp.isNullOrBlank()) {
+                    Row(
+                        modifier = GlanceModifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (!granted.isNullOrBlank()) {
+                            Column(modifier = GlanceModifier.defaultWeight()) {
+                                Text(
+                                    text = "Granted",
+                                    style = TextStyle(
+                                        color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF8E95A5)),
+                                        fontSize = 10.sp
+                                    )
+                                )
+                                Text(
+                                    text = "$symbol$granted",
+                                    style = TextStyle(
+                                        color = ColorProvider(androidx.compose.ui.graphics.Color(0xFFFFFFFF)),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+                            }
+                        }
+
+                        if (!toppedUp.isNullOrBlank()) {
+                            Column(modifier = GlanceModifier.defaultWeight()) {
+                                Text(
+                                    text = "Top-up",
+                                    style = TextStyle(
+                                        color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF8E95A5)),
+                                        fontSize = 10.sp
+                                    )
+                                )
+                                Text(
+                                    text = "$symbol$toppedUp",
+                                    style = TextStyle(
+                                        color = ColorProvider(androidx.compose.ui.graphics.Color(0xFFFFFFFF)),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 2×2 底部专属状态/更新时间行
+                Row(
+                    modifier = GlanceModifier.fillMaxWidth().padding(top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (isLoading) "● Syncing..." else "Updated $updatedAt",
+                        style = TextStyle(
+                            color = ColorProvider(
+                                androidx.compose.ui.graphics.Color(if (isLoading) 0xFF4D6BFE else 0xFF636B78)
+                            ),
+                            fontSize = 10.sp
+                        )
+                    )
+                }
+            } else {
+                // 2×1 / 3×1 等矮尺寸：
                 Spacer(modifier = GlanceModifier.defaultWeight())
                 Row(
                     modifier = GlanceModifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Granted: $symbol$granted  |  Top-up: $symbol$toppedUp",
-                        style = TextStyle(
-                            color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF636B78)),
-                            fontSize = 10.sp
+                    if (isWide && !granted.isNullOrBlank() && !toppedUp.isNullOrBlank()) {
+                        Text(
+                            text = "Granted: $symbol$granted  |  Top-up: $symbol$toppedUp",
+                            style = TextStyle(
+                                color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF636B78)),
+                                fontSize = 10.sp
+                            )
                         )
-                    )
+                    } else {
+                        // 2×1 窄版：显示单行状态提示
+                        Text(
+                            text = if (isLoading) "● Syncing..." else "Updated $updatedAt",
+                            style = TextStyle(
+                                color = ColorProvider(
+                                    androidx.compose.ui.graphics.Color(if (isLoading) 0xFF4D6BFE else 0xFF636B78)
+                                ),
+                                fontSize = 10.sp
+                            )
+                        )
+                    }
                 }
             }
+        }
+    }
+
+    @Composable
+    private fun RefreshButton() {
+        Box(
+            modifier = GlanceModifier
+                .size(28.dp)
+                .cornerRadius(14.dp)
+                .background(ColorProvider(androidx.compose.ui.graphics.Color(0x1AFFFFFF)))
+                .clickable(onClick = actionRunCallback<RefreshBalanceAction>()),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                provider = ImageProvider(R.drawable.ic_refresh_minimal),
+                contentDescription = "Refresh Balance",
+                modifier = GlanceModifier.size(14.dp)
+            )
         }
     }
 }

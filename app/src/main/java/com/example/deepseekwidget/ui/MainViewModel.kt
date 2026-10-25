@@ -30,7 +30,8 @@ data class MainUiState(
     val successMessage: String? = null,
     val lowBalanceThreshold: Float = 5.0f,
     val syncIntervalMinutes: Long = 60L,
-    val previewDarkMode: Boolean = true
+    val previewDarkMode: Boolean = true,
+    val previewIs2x2: Boolean = true
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -75,6 +76,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun togglePreviewMode() {
         _uiState.update { it.copy(previewDarkMode = !it.previewDarkMode) }
+    }
+
+    fun togglePreviewSize() {
+        _uiState.update { it.copy(previewIs2x2 = !it.previewIs2x2) }
     }
 
     fun setThreshold(threshold: Float) {
