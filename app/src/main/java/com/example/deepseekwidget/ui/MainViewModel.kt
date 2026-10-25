@@ -29,6 +29,7 @@ data class MainUiState(
     val errorMessage: String? = null,
     val successMessage: String? = null,
     val lowBalanceThreshold: Float = 5.0f,
+    val customThresholdInput: String = "5",
     val syncIntervalMinutes: Long = 60L,
     val previewDarkMode: Boolean = true,
     val previewIs2x2: Boolean = true
@@ -51,12 +52,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val threshold = SecureKeyStore.getLowBalanceThreshold(context)
         val interval = SecureKeyStore.getSyncIntervalMinutes(context)
         val isConfigured = key.isNotBlank()
+        val formattedThreshold = if (threshold % 1f == 0f) threshold.toInt().toString() else threshold.toString()
 
         _uiState.update {
             it.copy(
                 apiKey = key,
                 isConfigured = isConfigured,
                 lowBalanceThreshold = threshold,
+                customThresholdInput = formattedThreshold,
                 syncIntervalMinutes = interval
             )
         }
@@ -82,10 +85,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(previewIs2x2 = !it.previewIs2x2) }
     }
 
+    fun onCustomThresholdInputChanged(input: String) {
+        _uiState.update { it.copy(customThresholdInput = input) }
+        val parsed = input.toFloatOrNull()
+        if (parsed != null && parsed >= 0f) {
+            val context = getApplication<Application>()
+            SecureKeyStore.setLowBalanceThreshold(context, parsed)
+            _uiState.update { it.copy(lowBalanceThreshold = parsed) }
+            viewModelScope.launch {
+                syncRepository.updateThreshold(parsed)
+            }
+        }
+    }
+
     fun setThreshold(threshold: Float) {
         val context = getApplication<Application>()
+        val formatted = if (threshold % 1f == 0f) threshold.toInt().toString() else threshold.toString()
         SecureKeyStore.setLowBalanceThreshold(context, threshold)
-        _uiState.update { it.copy(lowBalanceThreshold = threshold) }
+        _uiState.update {
+            it.copy(
+                lowBalanceThreshold = threshold,
+                customThresholdInput = formatted
+            )
+        }
+        viewModelScope.launch {
+            syncRepository.updateThreshold(threshold)
+        }
     }
 
     fun setInterval(minutes: Long) {

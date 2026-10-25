@@ -32,6 +32,26 @@ class WidgetSyncRepository(private val context: Context) {
     }
 
     /**
+     * 更新告警阈值并立即重算全量小组件预警红/蓝指示灯状态
+     */
+    suspend fun updateThreshold(newThreshold: Float) {
+        SecureKeyStore.setLowBalanceThreshold(context, newThreshold)
+        val manager = GlanceAppWidgetManager(context)
+        val glanceIds = manager.getGlanceIds(DeepSeekBalanceWidget::class.java)
+        val thresholdDouble = newThreshold.toDouble()
+
+        glanceIds.forEach { id ->
+            updateAppWidgetState(context, id) { prefs ->
+                val currentTotal = prefs[WidgetPrefsKeys.TOTAL_BALANCE]?.toDoubleOrNull()
+                if (currentTotal != null) {
+                    prefs[WidgetPrefsKeys.IS_LOW_BALANCE] = currentTotal < thresholdDouble
+                }
+            }
+            DeepSeekBalanceWidget().update(context, id)
+        }
+    }
+
+    /**
      * 执行单组件同步刷新
      * @return Result<BalanceData> 同步结果
      */

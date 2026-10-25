@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -33,8 +34,10 @@ import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Widgets
@@ -64,6 +67,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
@@ -157,8 +161,11 @@ fun MainScreen(viewModel: MainViewModel) {
             // 同步与告警配置
             PreferencesSection(
                 currentThreshold = uiState.lowBalanceThreshold,
+                customThresholdInput = uiState.customThresholdInput,
+                currentBalance = uiState.balanceData,
                 currentInterval = uiState.syncIntervalMinutes,
                 onThresholdSelected = { viewModel.setThreshold(it) },
+                onCustomThresholdChanged = { viewModel.onCustomThresholdInputChanged(it) },
                 onIntervalSelected = { viewModel.setInterval(it) },
                 onPinWidget = {
                     val pinned = viewModel.requestPinWidget(context)
@@ -668,8 +675,11 @@ fun WidgetPreviewSection(
 @Composable
 fun PreferencesSection(
     currentThreshold: Float,
+    customThresholdInput: String,
+    currentBalance: BalanceData?,
     currentInterval: Long,
     onThresholdSelected: (Float) -> Unit,
+    onCustomThresholdChanged: (String) -> Unit,
     onIntervalSelected: (Long) -> Unit,
     onPinWidget: () -> Unit
 ) {
@@ -683,22 +693,49 @@ fun PreferencesSection(
             modifier = Modifier.padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "策略与小组件设定",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = ObsidianPrimaryInk
-            )
-
-            // 低余额警戒阈值选择
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "低余额警戒阈值（低于该值点亮红灯并推送告警）",
-                    fontSize = 12.sp,
-                    color = ObsidianSecondaryInk
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Tune,
+                    contentDescription = null,
+                    tint = AccentDeepSeek,
+                    modifier = Modifier.size(18.dp)
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(5.0f, 10.0f, 20.0f, 50.0f).forEach { value ->
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "策略与小组件设定",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = ObsidianPrimaryInk
+                )
+            }
+
+            // 低余额警戒阈值选择（支持预设与自定义）
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "低余额警戒阈值",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = ObsidianPrimaryInk
+                    )
+                    Text(
+                        text = "当前阈值：¥$currentThreshold",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AccentDeepSeek
+                    )
+                }
+
+                // 快捷预设金额 Chips
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(2.0f, 5.0f, 10.0f, 20.0f, 50.0f).forEach { value ->
                         val selected = currentThreshold == value
                         Surface(
                             shape = RoundedCornerShape(8.dp),
@@ -707,14 +744,86 @@ fun PreferencesSection(
                                 1.dp,
                                 if (selected) AccentDeepSeek else ObsidianBorder
                             ),
-                            modifier = Modifier.clickable { onThresholdSelected(value) }
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable { onThresholdSelected(value) }
                         ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = "¥${value.toInt()}",
+                                    fontSize = 12.sp,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (selected) Color.White else ObsidianSecondaryInk
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 自定义告警余额输入框
+                OutlinedTextField(
+                    value = customThresholdInput,
+                    onValueChange = onCustomThresholdChanged,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("自定义告警金额", fontSize = 12.sp, color = ObsidianSecondaryInk) },
+                    placeholder = { Text("如 2.50, 8.00, 15 等任意金额", fontSize = 13.sp, color = ObsidianMutedInk) },
+                    leadingIcon = {
+                        Text(
+                            text = "¥",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AccentDeepSeek,
+                            modifier = Modifier.padding(start = 12.dp)
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentDeepSeek,
+                        unfocusedBorderColor = ObsidianBorder,
+                        focusedTextColor = ObsidianPrimaryInk,
+                        unfocusedTextColor = ObsidianPrimaryInk,
+                        cursorColor = AccentDeepSeek
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                )
+
+                // 实时对比预警状态反馈卡片
+                if (currentBalance != null) {
+                    val currentTotal = currentBalance.totalBalanceNumber
+                    val isTriggered = currentTotal < currentThreshold
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (isTriggered) Color(0x26FF5252) else Color(0x1A4D6BFE),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isTriggered) StatusWarningDark.copy(alpha = 0.5f) else AccentDeepSeek.copy(alpha = 0.3f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isTriggered) StatusWarningDark else AccentDeepSeek)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "¥${value.toInt()}",
+                                text = if (isTriggered) {
+                                    "当前可用余额 ¥${currentBalance.totalBalance} 低于告警线 ¥${currentThreshold}，小组件已点亮红灯并推送通知"
+                                } else {
+                                    "当前可用余额 ¥${currentBalance.totalBalance} 高于告警线 ¥${currentThreshold}，状态正常（电光蓝）"
+                                },
                                 fontSize = 12.sp,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (selected) Color.White else ObsidianSecondaryInk,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                color = if (isTriggered) StatusWarningDark else ObsidianSecondaryInk
                             )
                         }
                     }
