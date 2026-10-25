@@ -1,0 +1,19 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="1.6"
+        android:scaleY="1.6"
+        android:translateX="15"
+        android:translateY="15">
+        <!-- DeepSeek stylized badge / letter D with sleek tech cut -->
+        <path
+            android:fillColor="#4D6BFE"
+            android:pathData="M18,12 L30,12 C36.6,12 42,17.4 42,24 C42,30.6 36.6,36 30,36 L18,36 Z M24,18 L24,30 L29.5,30 C32.8,30 35.5,27.3 35.5,24 C35.5,20.7 32.8,18 29.5,18 Z" />
+        <path
+            android:fillColor="#6E85FF"
+            android:pathData="M18,13.5 A2.5,2.5 0 1,1 18,18.5 A2.5,2.5 0 1,1 18,13.5" />
+    </group>
+</vector>
