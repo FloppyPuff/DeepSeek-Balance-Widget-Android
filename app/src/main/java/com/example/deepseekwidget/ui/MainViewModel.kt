@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import com.example.deepseekwidget.data.ThemeMode
+import com.example.deepseekwidget.data.UpdateCheckState
+import com.example.deepseekwidget.data.UpdateChecker
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -43,6 +45,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
+
+    private val _updateState = MutableStateFlow<UpdateCheckState>(UpdateCheckState.Idle)
+    val updateState: StateFlow<UpdateCheckState> = _updateState.asStateFlow()
 
     private val syncRepository = WidgetSyncRepository(application)
 
@@ -247,6 +252,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             syncRepository.syncAllWidgets()
         }
+    }
+
+    fun checkForUpdates(currentVersion: String) {
+        if (_updateState.value is UpdateCheckState.Checking) return
+        _updateState.value = UpdateCheckState.Checking
+        viewModelScope.launch {
+            UpdateChecker.checkLatestRelease(currentVersion)
+                .onSuccess { info ->
+                    _updateState.value = if (info.hasUpdate) {
+                        UpdateCheckState.HasUpdate(info)
+                    } else {
+                        UpdateCheckState.UpToDate
+                    }
+                }
+                .onFailure { err ->
+                    _updateState.value = UpdateCheckState.Error(err.localizedMessage ?: "检查更新失败")
+                }
+        }
+    }
+
+    fun resetUpdateState() {
+        _updateState.value = UpdateCheckState.Idle
     }
 
     fun requestPinWidget(context: Context): Boolean {

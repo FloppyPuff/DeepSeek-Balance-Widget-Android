@@ -1,5 +1,7 @@
 package com.example.deepseekwidget.ui
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -20,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -38,6 +41,9 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import com.example.deepseekwidget.BuildConfig
+import com.example.deepseekwidget.data.UpdateCheckState
+import com.example.deepseekwidget.data.UpdateInfo
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -126,6 +132,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
     val uiState by viewModel.uiState.collectAsState()
+    val updateState by viewModel.updateState.collectAsState()
     val palette = LocalPalette.current
     val context = LocalContext.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -135,6 +142,7 @@ fun MainScreen(viewModel: MainViewModel) {
 
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var showRemoveDialog by rememberSaveable { mutableStateOf(false) }
+    var showUpdateDialog by rememberSaveable { mutableStateOf(false) }
     var editingKey by rememberSaveable { mutableStateOf(false) }
     var keyVisible by rememberSaveable { mutableStateOf(false) }
     var keyDraft by remember { mutableStateOf("") }
@@ -490,6 +498,17 @@ fun MainScreen(viewModel: MainViewModel) {
                 showSettings = false
                 showRemoveDialog = true
             },
+            updateState = updateState,
+            onCheckUpdate = { viewModel.checkForUpdates(BuildConfig.VERSION_NAME) },
+            onShowUpdateDialog = { showUpdateDialog = true },
+        )
+    }
+
+    // 发现新版本更新弹窗
+    if (showUpdateDialog && updateState is UpdateCheckState.HasUpdate) {
+        UpdateDialog(
+            updateInfo = (updateState as UpdateCheckState.HasUpdate).updateInfo,
+            onDismiss = { showUpdateDialog = false }
         )
     }
 
@@ -929,6 +948,105 @@ private fun SecondaryActionButton(
             maxLines = 1,
         )
     }
+}
+
+@Composable
+private fun UpdateDialog(
+    updateInfo: UpdateInfo,
+    onDismiss: () -> Unit,
+) {
+    val palette = LocalPalette.current
+    val context = LocalContext.current
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = palette.surface,
+        titleContentColor = palette.primaryInk,
+        textContentColor = palette.secondaryInk,
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(palette.accent, CircleShape)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "发现新版本 v${updateInfo.latestVersion}",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                if (updateInfo.releaseNotes.isNotBlank()) {
+                    Text(
+                        text = "更新说明：",
+                        color = palette.primaryInk,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 200.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(palette.fieldFill)
+                            .border(1.dp, palette.hairline, RoundedCornerShape(10.dp))
+                            .verticalScroll(rememberScrollState())
+                            .padding(10.dp)
+                    ) {
+                        Text(
+                            text = updateInfo.releaseNotes,
+                            color = palette.secondaryInk,
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp,
+                        )
+                    }
+                } else {
+                    Text(
+                        text = "DeepSeek Balance 有新版本可用，建议前往下载体验最新功能与修复。",
+                        fontSize = 13.sp,
+                        lineHeight = 19.sp,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onDismiss()
+                    runCatching {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.downloadUrl))
+                        context.startActivity(intent)
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = palette.accent,
+                    contentColor = palette.onAccent,
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "前往下载",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = "稍后再说",
+                    color = palette.secondaryInk,
+                    fontSize = 13.sp,
+                )
+            }
+        },
+    )
 }
 
 

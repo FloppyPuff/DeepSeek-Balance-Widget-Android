@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.1] - 2026-10-26
+
+### 新增特性
+- **新增 GitHub Release 检查更新功能（方案 A）**：
+  - **设置页状态集成**：在设置抽屉「关于与安全」区域集成版本检测入口，支持“正在检查…”、“已是最新版本”、“发现新版 vX.Y.Z”多态交互，主屏保持零打扰。
+  - **更新日志弹窗与一键跳转下载**：发现新版后弹出先锋社论风更新详情弹窗，展示 GitHub Release 描述并支持一键唤起系统默认浏览器直链下载 APK，无须申请敏感权限。
+  - **网络防抖与容错**：直连 GitHub REST API 并限制 6 秒快速超时，网络异常时优雅降级，不影响日常余额查看。
+
+### 签名体系加固
+- **专用长期 Release 签名证书统一配置**：
+  - 本地生成专属长期 Release 证书并配置 `signing.properties`，同步配置 GitHub Actions Secrets（`RELEASE_KEYSTORE_BASE64`、`RELEASE_KEYSTORE_PASSWORD` 等）。
+  - 本地编译与 CI 云端编译实现证书完全统一，彻底根治覆盖安装报“签名冲突”的系统拦截问题，后续版本支持直接覆盖升级。
+
 ## [v1.3.0] - 2026-10-26
 
 ### 界面优化与多尺寸网格自适应

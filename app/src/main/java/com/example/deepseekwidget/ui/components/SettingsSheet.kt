@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -50,6 +51,7 @@ import com.example.deepseekwidget.BuildConfig
 import com.example.deepseekwidget.R
 import com.example.deepseekwidget.data.BalanceData
 import com.example.deepseekwidget.data.ThemeMode
+import com.example.deepseekwidget.data.UpdateCheckState
 import com.example.deepseekwidget.ui.theme.DisplayFontFamily
 import com.example.deepseekwidget.ui.theme.LocalPalette
 
@@ -68,6 +70,9 @@ fun SettingsSheet(
     onIntervalSelected: (Long) -> Unit,
     onDismiss: () -> Unit,
     onRemoveKeyRequest: () -> Unit,
+    updateState: UpdateCheckState = UpdateCheckState.Idle,
+    onCheckUpdate: () -> Unit = {},
+    onShowUpdateDialog: () -> Unit = {},
 ) {
     val palette = LocalPalette.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -326,15 +331,97 @@ fun SettingsSheet(
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringResource(R.string.version_label, BuildConfig.VERSION_NAME),
-                color = palette.tertiaryInk,
-                fontFamily = DisplayFontFamily,
-                fontSize = 11.sp,
-                letterSpacing = 0.6.sp,
-            )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
+
+            // 版本号与检查更新条目
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.version_label, BuildConfig.VERSION_NAME),
+                    color = palette.primaryInk,
+                    fontFamily = DisplayFontFamily,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.6.sp,
+                )
+                Spacer(Modifier.weight(1f))
+
+                when (updateState) {
+                    is UpdateCheckState.Checking -> {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(12.dp),
+                                strokeWidth = 1.4.dp,
+                                color = palette.accent
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "正在检查…",
+                                color = palette.tertiaryInk,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                    is UpdateCheckState.HasUpdate -> {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(palette.accent.copy(alpha = 0.15f))
+                                .border(1.dp, palette.accent.copy(alpha = 0.40f), RoundedCornerShape(8.dp))
+                                .clickable { onShowUpdateDialog() }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(6.dp).background(palette.accent, CircleShape))
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "发现新版 v${updateState.updateInfo.latestVersion}",
+                                    color = palette.accent,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                    is UpdateCheckState.UpToDate -> {
+                        Text(
+                            text = "已是最新版本",
+                            color = palette.tertiaryInk,
+                            fontSize = 11.sp
+                        )
+                    }
+                    is UpdateCheckState.Error -> {
+                        Text(
+                            text = "检查失败，重试",
+                            color = palette.warning,
+                            fontSize = 11.sp,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable { onCheckUpdate() }
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
+                    }
+                    UpdateCheckState.Idle -> {
+                        Text(
+                            text = "检查更新",
+                            color = palette.accent,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(palette.chipFill)
+                                .border(1.dp, palette.hairline, RoundedCornerShape(8.dp))
+                                .clickable { onCheckUpdate() }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
             Text(
                 text = stringResource(R.string.privacy_note),
                 color = palette.tertiaryInk,
