@@ -119,7 +119,8 @@ fun WidgetPreviewCard(
         Color.Black.copy(alpha = 0.06f)
     }
 
-    val cardHeight = if (is2x2) 190.dp else 170.dp
+    val cardHeight = if (is2x2) 186.dp else 118.dp
+    val verticalPadding = if (is2x2) 14.dp else 10.dp
 
     Box(
         modifier = modifier
@@ -135,7 +136,7 @@ fun WidgetPreviewCard(
             .clip(shape)
             .background(background)
             .border(1.dp, borderColor, shape)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = verticalPadding),
     ) {
         val primaryColorInt = if (hasData || isSample) {
             palette.primaryInk.toArgb()
@@ -153,7 +154,8 @@ fun WidgetPreviewCard(
             symbol,
             palette.isDark,
             primaryColorInt,
-            secondaryColorInt
+            secondaryColorInt,
+            is2x2
         ) {
             BalanceTypographyRenderer.renderBalanceBitmap(
                 context = context,
@@ -161,6 +163,7 @@ fun WidgetPreviewCard(
                 balanceStr = total ?: "--.--",
                 primaryColor = primaryColorInt,
                 secondaryColor = secondaryColorInt,
+                baseSizeSp = if (is2x2) 44f else 30f,
             )
         }
         val heroWidth = with(density) { (bitmap.width / density.density).dp }
@@ -258,17 +261,17 @@ fun WidgetPreviewCard(
                     .size(width = heroWidth, height = heroHeight),
             )
 
-            Spacer(Modifier.weight(1f))
-
-            // 底栏区域
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(palette.hairline),
-            )
-
             if (is2x2) {
+                Spacer(Modifier.weight(1f))
+
+                // 2×2 底栏区域
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(palette.hairline),
+                )
+
                 // 2×2 双列明细
                 Row(
                     modifier = Modifier
@@ -287,30 +290,6 @@ fun WidgetPreviewCard(
                         value = if (toppedUp != null) "$symbol$toppedUp" else "—",
                         muted = toppedUp == null,
                         alignEnd = true,
-                    )
-                }
-            } else {
-                // 2×1 单行紧凑标签
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = "Granted: ${if (granted != null) "$symbol$granted" else "—"}",
-                        color = palette.tertiaryInk,
-                        fontFamily = DisplayFontFamily,
-                        fontSize = 10.sp,
-                        letterSpacing = 0.4.sp,
-                    )
-                    Text(
-                        text = "Top-up: ${if (toppedUp != null) "$symbol$toppedUp" else "—"}",
-                        color = palette.secondaryInk,
-                        fontFamily = DisplayFontFamily,
-                        fontSize = 10.sp,
-                        letterSpacing = 0.4.sp,
                     )
                 }
             }

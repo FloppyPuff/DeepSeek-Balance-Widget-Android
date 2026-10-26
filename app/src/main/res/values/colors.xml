@@ -7,6 +7,7 @@
     <color name="secondary_ink">#636B78</color>
     <color name="muted_ink">#9EA6B4</color>
     <color name="widget_button_bg">#14000000</color>
+    <color name="hairline_border">#14000000</color>
     <color name="accent_deepseek">#3B5BFF</color>
     <color name="status_warning">#D32F2F</color>
 </resources>
