@@ -32,12 +32,12 @@ class DeepSeekWidgetReceiver : GlanceAppWidgetReceiver() {
 
     private fun triggerWidgetSync(context: Context) {
         if (SecureKeyStore.isConfigured(context)) {
-            val pendingResult = goAsync()
+            val pendingResult = runCatching { goAsync() }.getOrNull()
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     WidgetSyncRepository(context).syncAllWidgets()
                 } finally {
-                    pendingResult.finish()
+                    runCatching { pendingResult?.finish() }
                 }
             }
         }

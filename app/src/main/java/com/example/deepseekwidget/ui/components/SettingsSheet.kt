@@ -89,6 +89,7 @@ fun SettingsSheet(
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scrollState = rememberScrollState()
+    val currencySymbol = currentBalance?.currencySymbol ?: "¥"
 
     // 拦截过度上冲的 fling 速度与边界滚动，彻底修复 ModalBottomSheet 内部上下无限震荡跳动 Bug
     val nestedScrollConnection = remember(sheetState, scrollState) {
@@ -192,7 +193,7 @@ fun SettingsSheet(
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    text = "当前阈值：¥$currentThreshold",
+                    text = "当前阈值：$currencySymbol$currentThreshold",
                     color = palette.accent,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
@@ -218,7 +219,7 @@ fun SettingsSheet(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "¥${value.toInt()}",
+                            text = "$currencySymbol${value.toInt()}",
                             fontSize = 12.sp,
                             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                             color = if (selected) palette.onAccent else palette.secondaryInk
@@ -239,7 +240,7 @@ fun SettingsSheet(
                 },
                 leadingIcon = {
                     Text(
-                        text = "¥",
+                        text = currencySymbol,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = palette.accent,
@@ -286,9 +287,9 @@ fun SettingsSheet(
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = if (isTriggered) {
-                                "当前可用余额 ¥${currentBalance.totalBalance} 低于告警线 ¥${currentThreshold}，小组件点亮红灯"
+                                "当前可用余额 $currencySymbol${currentBalance.totalBalance} 低于告警线 $currencySymbol${currentThreshold}，小组件点亮红灯"
                             } else {
-                                "当前可用余额 ¥${currentBalance.totalBalance} 高于告警线 ¥${currentThreshold}，状态正常"
+                                "当前可用余额 $currencySymbol${currentBalance.totalBalance} 高于告警线 $currencySymbol${currentThreshold}，状态正常"
                             },
                             fontSize = 11.sp,
                             color = if (isTriggered) palette.warning else palette.secondaryInk,

@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
+import android.os.Build
+
 /**
  * 基于 Android KeyStore (AES256-GCM) 的加密凭证存储库
  * 坚决贯彻 Zero-Plaintext Policy：密钥严禁明文落盘，避免进入 DataStore / Preferences 文件
@@ -22,36 +24,62 @@ object SecureKeyStore {
 
     private fun getEncryptedPrefs(context: Context): SharedPreferences {
         return cachedPrefs ?: synchronized(this) {
-            cachedPrefs ?: run {
-                val masterKey = MasterKey.Builder(context.applicationContext)
-                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                    .build()
-
-                EncryptedSharedPreferences.create(
-                    context.applicationContext,
-                    PREFS_NAME,
-                    masterKey,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                ).also { cachedPrefs = it }
-            }
+            cachedPrefs ?: createEncryptedPrefsWithFallback(context).also { cachedPrefs = it }
         }
     }
 
+    private fun createEncryptedPrefsWithFallback(context: Context): SharedPreferences {
+        val appContext = context.applicationContext
+        return try {
+            createEncryptedPrefs(appContext)
+        } catch (e: Exception) {
+            // 当系统恢复备份、换机或 Keystore 主密钥损坏时，旧密文文件无法被当前硬件解密
+            // 兜底机制：物理擦除失效的加密文件，重置 KeyStore 根密钥并重新初始化，避免启动崩溃
+            runCatching {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    appContext.deleteSharedPreferences(PREFS_NAME)
+                } else {
+                    appContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit()
+                }
+            }
+            createEncryptedPrefs(appContext)
+        }
+    }
+
+    private fun createEncryptedPrefs(appContext: Context): SharedPreferences {
+        val masterKey = MasterKey.Builder(appContext)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+
+        return EncryptedSharedPreferences.create(
+            appContext,
+            PREFS_NAME,
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }
+
     fun saveApiKey(context: Context, apiKey: String) {
-        getEncryptedPrefs(context).edit()
-            .putString(KEY_API_KEY, apiKey.trim())
-            .apply()
+        runCatching {
+            getEncryptedPrefs(context).edit()
+                .putString(KEY_API_KEY, apiKey.trim())
+                .apply()
+        }
     }
 
     fun getApiKey(context: Context): String? {
-        return getEncryptedPrefs(context).getString(KEY_API_KEY, null)?.takeIf { it.isNotBlank() }
+        return runCatching {
+            getEncryptedPrefs(context).getString(KEY_API_KEY, null)?.takeIf { it.isNotBlank() }
+        }.getOrNull()
     }
 
     fun clearApiKey(context: Context) {
-        getEncryptedPrefs(context).edit()
-            .remove(KEY_API_KEY)
-            .apply()
+        runCatching {
+            getEncryptedPrefs(context).edit()
+                .remove(KEY_API_KEY)
+                .apply()
+        }
     }
 
     fun isConfigured(context: Context): Boolean {
@@ -59,44 +87,60 @@ object SecureKeyStore {
     }
 
     fun getLowBalanceThreshold(context: Context): Float {
-        return getEncryptedPrefs(context).getFloat(KEY_LOW_BALANCE_THRESHOLD, 5.0f)
+        return runCatching {
+            getEncryptedPrefs(context).getFloat(KEY_LOW_BALANCE_THRESHOLD, 5.0f)
+        }.getOrDefault(5.0f)
     }
 
     fun setLowBalanceThreshold(context: Context, threshold: Float) {
-        getEncryptedPrefs(context).edit()
-            .putFloat(KEY_LOW_BALANCE_THRESHOLD, threshold)
-            .apply()
+        runCatching {
+            getEncryptedPrefs(context).edit()
+                .putFloat(KEY_LOW_BALANCE_THRESHOLD, threshold)
+                .apply()
+        }
     }
 
     fun getSyncIntervalMinutes(context: Context): Long {
-        return getEncryptedPrefs(context).getLong(KEY_SYNC_INTERVAL_MINUTES, 60L)
+        return runCatching {
+            getEncryptedPrefs(context).getLong(KEY_SYNC_INTERVAL_MINUTES, 60L)
+        }.getOrDefault(60L)
     }
 
     fun setSyncIntervalMinutes(context: Context, minutes: Long) {
-        getEncryptedPrefs(context).edit()
-            .putLong(KEY_SYNC_INTERVAL_MINUTES, minutes)
-            .apply()
+        runCatching {
+            getEncryptedPrefs(context).edit()
+                .putLong(KEY_SYNC_INTERVAL_MINUTES, minutes)
+                .apply()
+        }
     }
 
     fun isLowBalanceNotificationEnabled(context: Context): Boolean {
-        return getEncryptedPrefs(context).getBoolean(KEY_NOTIFY_LOW_BALANCE, true)
+        return runCatching {
+            getEncryptedPrefs(context).getBoolean(KEY_NOTIFY_LOW_BALANCE, true)
+        }.getOrDefault(true)
     }
 
     fun setLowBalanceNotificationEnabled(context: Context, enabled: Boolean) {
-        getEncryptedPrefs(context).edit()
-            .putBoolean(KEY_NOTIFY_LOW_BALANCE, enabled)
-            .apply()
+        runCatching {
+            getEncryptedPrefs(context).edit()
+                .putBoolean(KEY_NOTIFY_LOW_BALANCE, enabled)
+                .apply()
+        }
     }
 
     fun getThemeMode(context: Context): ThemeMode {
-        val name = getEncryptedPrefs(context).getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name)
-        return runCatching { ThemeMode.valueOf(name ?: ThemeMode.SYSTEM.name) }.getOrDefault(ThemeMode.SYSTEM)
+        return runCatching {
+            val name = getEncryptedPrefs(context).getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name)
+            ThemeMode.valueOf(name ?: ThemeMode.SYSTEM.name)
+        }.getOrDefault(ThemeMode.SYSTEM)
     }
 
     fun setThemeMode(context: Context, mode: ThemeMode) {
-        getEncryptedPrefs(context).edit()
-            .putString(KEY_THEME_MODE, mode.name)
-            .apply()
+        runCatching {
+            getEncryptedPrefs(context).edit()
+                .putString(KEY_THEME_MODE, mode.name)
+                .apply()
+        }
     }
 
     fun getMaskedApiKey(context: Context): String? {

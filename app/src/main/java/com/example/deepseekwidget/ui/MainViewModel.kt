@@ -27,7 +27,6 @@ import kotlinx.coroutines.launch
 data class MainUiState(
     val apiKey: String = "",
     val maskedKey: String? = null,
-    val isKeyVisible: Boolean = false,
     val isConfigured: Boolean = false,
     val isLoading: Boolean = false,
     val balanceData: BalanceData? = null,
@@ -36,7 +35,6 @@ data class MainUiState(
     val lowBalanceThreshold: Float = 5.0f,
     val customThresholdInput: String = "5",
     val syncIntervalMinutes: Long = 60L,
-    val previewDarkMode: Boolean = true,
     val previewIs2x2: Boolean = true,
     val themeMode: ThemeMode = ThemeMode.SYSTEM
 )
@@ -92,14 +90,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onApiKeyChanged(newKey: String) {
         _uiState.update { it.copy(apiKey = newKey, errorMessage = null, successMessage = null) }
-    }
-
-    fun toggleKeyVisibility() {
-        _uiState.update { it.copy(isKeyVisible = !it.isKeyVisible) }
-    }
-
-    fun togglePreviewMode() {
-        _uiState.update { it.copy(previewDarkMode = !it.previewDarkMode) }
     }
 
     fun togglePreviewSize() {
@@ -166,37 +156,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     it.copy(
                         isLoading = false,
                         errorMessage = "同步失败: ${err.localizedMessage ?: "网络连接异常"}"
-                    )
-                }
-            }
-        }
-    }
-
-    fun testAndFetchBalance() {
-        val key = _uiState.value.apiKey.trim()
-        if (key.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "请输入有效的 DeepSeek API Key") }
-            return
-        }
-
-        _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
-
-        viewModelScope.launch {
-            val result = DeepSeekApiClient.fetchBalance(key)
-            result.onSuccess { data ->
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        balanceData = data,
-                        errorMessage = null,
-                        successMessage = "获取成功：余额 ${data.currencySymbol}${data.totalBalance}"
-                    )
-                }
-            }.onFailure { err ->
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = err.localizedMessage ?: "连接失败，请检查网络或 Key 是否有效"
                     )
                 }
             }

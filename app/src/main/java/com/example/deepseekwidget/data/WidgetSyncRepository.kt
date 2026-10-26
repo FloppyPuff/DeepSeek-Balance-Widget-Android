@@ -66,7 +66,6 @@ class WidgetSyncRepository(private val context: Context) {
         if (apiKey.isNullOrBlank()) {
             runCatching {
                 updateAppWidgetState(context, glanceId) { prefs ->
-                    prefs[WidgetPrefsKeys.IS_CONFIGURED] = false
                     prefs[WidgetPrefsKeys.IS_LOADING] = false
                     prefs[WidgetPrefsKeys.HAS_ERROR] = true
                     prefs[WidgetPrefsKeys.ERROR_MSG] = "Missing API Key"
@@ -74,13 +73,6 @@ class WidgetSyncRepository(private val context: Context) {
                 DeepSeekBalanceWidget().update(context, glanceId)
             }
             return Result.failure(IllegalStateException("API Key not configured"))
-        }
-
-        // 标记组件已配置
-        runCatching {
-            updateAppWidgetState(context, glanceId) { prefs ->
-                prefs[WidgetPrefsKeys.IS_CONFIGURED] = true
-            }
         }
 
         val result = DeepSeekApiClient.fetchBalance(apiKey)
@@ -136,7 +128,6 @@ class WidgetSyncRepository(private val context: Context) {
             glanceIds.forEach { id ->
                 runCatching {
                     updateAppWidgetState(context, id) { prefs ->
-                        prefs[WidgetPrefsKeys.IS_CONFIGURED] = false
                         prefs[WidgetPrefsKeys.IS_LOADING] = false
                     }
                     DeepSeekBalanceWidget().update(context, id)
@@ -162,7 +153,6 @@ class WidgetSyncRepository(private val context: Context) {
         glanceIds.forEach { id ->
             runCatching {
                 updateAppWidgetState(context, id) { prefs ->
-                    prefs[WidgetPrefsKeys.IS_CONFIGURED] = true
                     prefs[WidgetPrefsKeys.IS_LOADING] = false
                     prefs[WidgetPrefsKeys.LAST_REFRESH_TIMESTAMP] = System.currentTimeMillis()
 

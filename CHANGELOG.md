@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.4] - 2026-10-26
+
+### 稳定性加固与系统兼容
+- **Android 13+ 运行时通知权限（POST_NOTIFICATIONS）支持**：
+  - 主界面启动时主动检查并在需要时申请系统通知权限，解决 Android 13+ 设备上低余额预警通知默认被系统静默拦截的问题，确保临界预警准时送达。
+- **动态币种符号适配（消除硬编码）**：
+  - 设置抽屉「低余额预警阈值」的输入框前缀及对照文案全面接入动态币种解析，随账户实际币种（¥ / $）无缝切换，彻底消除币种符号不一致的认知困惑。
+- **安全存储与云备份容错自愈（Keystore Fallback）**：
+  - 在 `AndroidManifest.xml` 中显式配置 `android:allowBackup="false"`，规避系统换机迁移导致的 EncryptedSharedPreferences 密钥链失效隐患。
+  - 在 `SecureKeyStore` 中增加捕获与密钥损毁自动重置机制，防止极端场景下应用因解密失败闪退。
+- **广播异步生命周期健壮性修复**：
+  - 修复 `DeepSeekWidgetReceiver` 中因框架层多次调用 `goAsync()` 返回空值导致的 `NullPointerException` 崩溃问题。
+- **代码精简与同步架构收敛**：
+  - 彻底清理 `MainViewModel` 中废弃的测试与预览状态死代码，统一收敛 `RefreshBalanceAction` 与 `WidgetSyncRepository` 的重复同步逻辑，进一步降低运行时内存开销。
+- **宣传工作台同步**：
+  - 宣传页工作室版本微标同步升级至 `v1.3.4`。
+
 ## [v1.3.3] - 2026-10-26
 
 ### 合规与安全声明

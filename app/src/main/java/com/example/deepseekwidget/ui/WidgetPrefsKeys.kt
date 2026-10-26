@@ -17,7 +17,6 @@ object WidgetPrefsKeys {
     val IS_LOADING = booleanPreferencesKey("is_loading")
     val HAS_ERROR = booleanPreferencesKey("has_error")
     val ERROR_MSG = stringPreferencesKey("error_msg")
-    val IS_CONFIGURED = booleanPreferencesKey("is_configured")
     val IS_LOW_BALANCE = booleanPreferencesKey("is_low_balance")
     val LAST_REFRESH_TIMESTAMP = longPreferencesKey("last_refresh_timestamp")
 }

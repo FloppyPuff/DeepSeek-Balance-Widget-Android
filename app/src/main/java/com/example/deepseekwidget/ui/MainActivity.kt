@@ -1,13 +1,19 @@
 package com.example.deepseekwidget.ui
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -149,6 +155,24 @@ fun MainScreen(viewModel: MainViewModel) {
     var localErrorText by remember { mutableStateOf<String?>(null) }
     val keyFocusRequester = remember { FocusRequester() }
 
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
+    fun checkAndRequestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
+    LaunchedEffect(uiState.isConfigured) {
+        if (uiState.isConfigured) {
+            checkAndRequestNotificationPermission()
+        }
+    }
+
     LaunchedEffect(editingKey) {
         if (editingKey) {
             delay(150)
@@ -195,6 +219,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 editingKey = false
                 keyDraft = ""
                 keyVisible = false
+                checkAndRequestNotificationPermission()
             }
         }
     }
@@ -242,7 +267,10 @@ fun MainScreen(viewModel: MainViewModel) {
             // 顶栏：品牌标识 + 状态指示灯 + 设置入口
             Header(
                 isConfigured = uiState.isConfigured,
-                onSettingsClick = { showSettings = true },
+                onSettingsClick = {
+                    showSettings = true
+                    checkAndRequestNotificationPermission()
+                },
             )
 
             Column(
