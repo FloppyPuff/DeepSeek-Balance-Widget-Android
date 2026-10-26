@@ -49,6 +49,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -83,6 +84,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.deepseekwidget.R
 import com.example.deepseekwidget.ui.components.EyeGlyph
 import com.example.deepseekwidget.ui.components.LockGlyph
@@ -153,6 +158,19 @@ fun MainScreen(viewModel: MainViewModel) {
         uiState.errorMessage?.let {
             snackbarHostState.showSnackbar(it)
         }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                if (uiState.isConfigured && !uiState.isLoading) {
+                    viewModel.syncAllWidgets()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     fun submitKey() {
@@ -278,7 +296,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         errorMessage = uiState.errorMessage,
                         is2x2 = uiState.previewIs2x2,
                         lowBalanceThreshold = uiState.lowBalanceThreshold,
-                        onRefresh = { viewModel.testAndFetchBalance() },
+                        onRefresh = { viewModel.syncAllWidgets() },
                     )
 
                     // 预览底部元数据与重试
@@ -286,7 +304,7 @@ fun MainScreen(viewModel: MainViewModel) {
                         isConfigured = uiState.isConfigured,
                         errorMessage = uiState.errorMessage,
                         isLoading = uiState.isLoading,
-                        onRetry = { viewModel.testAndFetchBalance() },
+                        onRetry = { viewModel.syncAllWidgets() },
                     )
 
                     Spacer(Modifier.height(28.dp))
@@ -419,7 +437,7 @@ fun MainScreen(viewModel: MainViewModel) {
                                         RefreshGlyph(tint = palette.onAccent, size = 15.dp)
                                     }
                                 },
-                                onClick = { viewModel.testAndFetchBalance() },
+                                onClick = { viewModel.syncAllWidgets() },
                                 modifier = Modifier.weight(1f),
                             )
                             SecondaryActionButton(

@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Build
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.deepseekwidget.data.BalanceCache
 import com.example.deepseekwidget.data.BalanceData
 import com.example.deepseekwidget.data.DeepSeekApiClient
 import com.example.deepseekwidget.data.SecureKeyStore
@@ -59,11 +60,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val isConfigured = key.isNotBlank()
         val formattedThreshold = if (threshold % 1f == 0f) threshold.toInt().toString() else threshold.toString()
 
+        val cached = BalanceCache.get(context)
         _uiState.update {
             it.copy(
                 apiKey = key,
                 maskedKey = masked,
                 isConfigured = isConfigured,
+                balanceData = cached.data ?: it.balanceData,
                 lowBalanceThreshold = threshold,
                 customThresholdInput = formattedThreshold,
                 syncIntervalMinutes = interval,
@@ -72,7 +75,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         if (isConfigured) {
-            testAndFetchBalance()
+            syncAllWidgets()
         }
     }
 
@@ -131,6 +134,37 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         SecureKeyStore.setSyncIntervalMinutes(context, minutes)
         BalanceSyncWorker.schedulePeriodicSync(context, minutes)
         _uiState.update { it.copy(syncIntervalMinutes = minutes) }
+    }
+
+    fun syncAllWidgets() {
+        val key = _uiState.value.apiKey.trim()
+        if (key.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "请输入有效的 DeepSeek API Key") }
+            return
+        }
+
+        _uiState.update { it.copy(isLoading = true, errorMessage = null, successMessage = null) }
+
+        viewModelScope.launch {
+            val syncResult = syncRepository.syncAllWidgets()
+            syncResult.onSuccess { data ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        balanceData = data,
+                        errorMessage = null,
+                        successMessage = "同步成功：余额 ${data.currencySymbol}${data.totalBalance}，小组件已同步更新"
+                    )
+                }
+            }.onFailure { err ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "同步失败: ${err.localizedMessage ?: "网络连接异常"}"
+                    )
+                }
+            }
+        }
     }
 
     fun testAndFetchBalance() {
@@ -200,6 +234,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun clearKey() {
         val context = getApplication<Application>()
         SecureKeyStore.clearApiKey(context)
+        BalanceCache.clear(context)
         _uiState.update {
             it.copy(
                 apiKey = "",

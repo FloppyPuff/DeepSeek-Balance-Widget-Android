@@ -8,6 +8,7 @@ import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.appwidget.state.getAppWidgetState
 import androidx.glance.state.PreferencesGlanceStateDefinition
+import com.example.deepseekwidget.data.BalanceCache
 import com.example.deepseekwidget.data.DeepSeekApiClient
 import com.example.deepseekwidget.data.SecureKeyStore
 import com.example.deepseekwidget.data.WidgetSyncRepository
@@ -64,6 +65,12 @@ class RefreshBalanceAction : ActionCallback {
         val result = DeepSeekApiClient.fetchBalance(apiKey)
         val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
         val threshold = SecureKeyStore.getLowBalanceThreshold(context).toDouble()
+
+        result.onSuccess { data ->
+            BalanceCache.save(context, data, timeStr)
+        }.onFailure { error ->
+            BalanceCache.markError(context, error.localizedMessage ?: "Sync Failed")
+        }
 
         // 第四步：写回最新数据并触发重绘
         updateAppWidgetState(context, glanceId) { prefs ->

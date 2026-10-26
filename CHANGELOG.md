@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.1] - 2026-10-26
+
+### 修复与优化
+- **修复数据无法同步至桌面小组件核心 Bug**：
+  - **同步动作方法绑定重构**：主界面“立即同步”按键、预览卡片刷新按钮及进入前台流程修正为调用 `WidgetSyncRepository.syncAllWidgets()`，确保从 DeepSeek API 拉取数据后全量广播写回所有桌面小组件实例并刷新重绘。
+  - **组件配置状态逻辑修正**：修复 `DeepSeekBalanceWidget` 内部错误依赖单实例 `prefs[IS_CONFIGURED]` 导致新添加小组件误判为未配置的问题，小组件直接由 `SecureKeyStore.isConfigured(context)` 凭据状态驱动。
+  - **非敏感展示数据持久化共享缓存（`BalanceCache`）**：新添持久化共享缓存，当新小组件首次放置到桌面或应用冷启动时，零延迟立即填充上一有效余额与币种，杜绝空白卡片。
+  - **广播接收器添加即同步**：`DeepSeekWidgetReceiver` 覆写 `onUpdate` 与 `onEnabled`，在小组件放置到桌面瞬间自动触发后台同步。
+
 ## [v1.2.0] - 2026-10-26
 
 ### 界面设计与交互迁移

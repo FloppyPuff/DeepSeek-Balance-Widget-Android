@@ -2,6 +2,7 @@ package com.example.deepseekwidget.ui
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,6 +39,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.example.deepseekwidget.R
+import com.example.deepseekwidget.data.BalanceCache
 import com.example.deepseekwidget.data.SecureKeyStore
 import com.example.deepseekwidget.ui.render.BalanceTypographyRenderer
 
@@ -62,20 +64,22 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
 
         provideContent {
             val prefs = currentState<Preferences>()
-            val isConfigured = (prefs[WidgetPrefsKeys.IS_CONFIGURED] ?: false) && hasKey
             val size = LocalSize.current
 
-            if (!isConfigured) {
+            if (!hasKey) {
                 UnconfiguredCard(size = size)
             } else {
-                val balance = prefs[WidgetPrefsKeys.TOTAL_BALANCE] ?: "--.--"
-                val symbol = prefs[WidgetPrefsKeys.CURRENCY_SYMBOL] ?: "¥"
-                val granted = prefs[WidgetPrefsKeys.GRANTED_BALANCE]
-                val toppedUp = prefs[WidgetPrefsKeys.TOPPED_UP_BALANCE]
-                val updatedAt = prefs[WidgetPrefsKeys.UPDATED_AT] ?: "Never"
+                val cached = remember { BalanceCache.get(context) }
+                val balance = prefs[WidgetPrefsKeys.TOTAL_BALANCE] ?: cached.data?.totalBalance ?: "--.--"
+                val symbol = prefs[WidgetPrefsKeys.CURRENCY_SYMBOL] ?: cached.data?.currencySymbol ?: "¥"
+                val granted = prefs[WidgetPrefsKeys.GRANTED_BALANCE] ?: cached.data?.grantedBalance
+                val toppedUp = prefs[WidgetPrefsKeys.TOPPED_UP_BALANCE] ?: cached.data?.toppedUpBalance
+                val updatedAt = prefs[WidgetPrefsKeys.UPDATED_AT] ?: cached.updatedAt ?: "Never"
                 val isLoading = prefs[WidgetPrefsKeys.IS_LOADING] ?: false
-                val hasError = prefs[WidgetPrefsKeys.HAS_ERROR] ?: false
-                val isLow = prefs[WidgetPrefsKeys.IS_LOW_BALANCE] ?: false
+                val hasError = prefs[WidgetPrefsKeys.HAS_ERROR] ?: cached.hasError
+                val threshold = SecureKeyStore.getLowBalanceThreshold(context).toDouble()
+                val isLow = prefs[WidgetPrefsKeys.IS_LOW_BALANCE]
+                    ?: (cached.data?.isLowBalance(threshold) ?: false)
 
                 AdaptiveBalanceCard(
                     size = size,

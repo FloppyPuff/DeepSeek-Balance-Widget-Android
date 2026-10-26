@@ -37,17 +37,23 @@ class WidgetSyncRepository(private val context: Context) {
     suspend fun updateThreshold(newThreshold: Float) {
         SecureKeyStore.setLowBalanceThreshold(context, newThreshold)
         val manager = GlanceAppWidgetManager(context)
-        val glanceIds = manager.getGlanceIds(DeepSeekBalanceWidget::class.java)
+        val glanceIds = runCatching {
+            manager.getGlanceIds(DeepSeekBalanceWidget::class.java)
+        }.getOrDefault(emptyList())
         val thresholdDouble = newThreshold.toDouble()
+        val cached = BalanceCache.get(context)
 
         glanceIds.forEach { id ->
-            updateAppWidgetState(context, id) { prefs ->
-                val currentTotal = prefs[WidgetPrefsKeys.TOTAL_BALANCE]?.toDoubleOrNull()
-                if (currentTotal != null) {
-                    prefs[WidgetPrefsKeys.IS_LOW_BALANCE] = currentTotal < thresholdDouble
+            runCatching {
+                updateAppWidgetState(context, id) { prefs ->
+                    val currentTotal = prefs[WidgetPrefsKeys.TOTAL_BALANCE]?.toDoubleOrNull()
+                        ?: cached.data?.totalBalanceNumber
+                    if (currentTotal != null) {
+                        prefs[WidgetPrefsKeys.IS_LOW_BALANCE] = currentTotal < thresholdDouble
+                    }
                 }
+                DeepSeekBalanceWidget().update(context, id)
             }
-            DeepSeekBalanceWidget().update(context, id)
         }
     }
 
@@ -58,80 +64,37 @@ class WidgetSyncRepository(private val context: Context) {
     suspend fun syncWidget(glanceId: GlanceId, force: Boolean = false): Result<BalanceData> {
         val apiKey = SecureKeyStore.getApiKey(context)
         if (apiKey.isNullOrBlank()) {
-            updateAppWidgetState(context, glanceId) { prefs ->
-                prefs[WidgetPrefsKeys.IS_CONFIGURED] = false
-                prefs[WidgetPrefsKeys.IS_LOADING] = false
-                prefs[WidgetPrefsKeys.HAS_ERROR] = true
-                prefs[WidgetPrefsKeys.ERROR_MSG] = "Missing API Key"
+            runCatching {
+                updateAppWidgetState(context, glanceId) { prefs ->
+                    prefs[WidgetPrefsKeys.IS_CONFIGURED] = false
+                    prefs[WidgetPrefsKeys.IS_LOADING] = false
+                    prefs[WidgetPrefsKeys.HAS_ERROR] = true
+                    prefs[WidgetPrefsKeys.ERROR_MSG] = "Missing API Key"
+                }
+                DeepSeekBalanceWidget().update(context, glanceId)
             }
-            DeepSeekBalanceWidget().update(context, glanceId)
             return Result.failure(IllegalStateException("API Key not configured"))
         }
 
         // 标记组件已配置
-        updateAppWidgetState(context, glanceId) { prefs ->
-            prefs[WidgetPrefsKeys.IS_CONFIGURED] = true
-        }
-
-        val result = DeepSeekApiClient.fetchBalance(apiKey)
-        val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-        val threshold = SecureKeyStore.getLowBalanceThreshold(context).toDouble()
-
-        updateAppWidgetState(context, glanceId) { prefs ->
-            prefs[WidgetPrefsKeys.IS_LOADING] = false
-            prefs[WidgetPrefsKeys.LAST_REFRESH_TIMESTAMP] = System.currentTimeMillis()
-
-            result.onSuccess { data ->
-                prefs[WidgetPrefsKeys.TOTAL_BALANCE] = data.totalBalance
-                prefs[WidgetPrefsKeys.CURRENCY_SYMBOL] = data.currencySymbol
-                prefs[WidgetPrefsKeys.GRANTED_BALANCE] = data.grantedBalance
-                prefs[WidgetPrefsKeys.TOPPED_UP_BALANCE] = data.toppedUpBalance
-                prefs[WidgetPrefsKeys.UPDATED_AT] = timeStr
-                prefs[WidgetPrefsKeys.HAS_ERROR] = false
-                prefs[WidgetPrefsKeys.ERROR_MSG] = ""
-                val isLow = data.isLowBalance(threshold)
-                prefs[WidgetPrefsKeys.IS_LOW_BALANCE] = isLow
-
-                if (isLow && SecureKeyStore.isLowBalanceNotificationEnabled(context)) {
-                    sendLowBalanceNotification(data.currencySymbol, data.totalBalance)
-                }
-            }.onFailure { error ->
-                prefs[WidgetPrefsKeys.HAS_ERROR] = true
-                prefs[WidgetPrefsKeys.ERROR_MSG] = error.localizedMessage ?: "Sync Failed"
-                // 保留上一次的 balance 和 currencySymbol 缓存
-            }
-        }
-        DeepSeekBalanceWidget().update(context, glanceId)
-        return result
-    }
-
-    /**
-     * 批量同步所有已放置在桌面的组件
-     */
-    suspend fun syncAllWidgets(): Result<BalanceData> {
-        val manager = GlanceAppWidgetManager(context)
-        val glanceIds = manager.getGlanceIds(DeepSeekBalanceWidget::class.java)
-
-        val apiKey = SecureKeyStore.getApiKey(context)
-        if (apiKey.isNullOrBlank()) {
-            glanceIds.forEach { id ->
-                updateAppWidgetState(context, id) { prefs ->
-                    prefs[WidgetPrefsKeys.IS_CONFIGURED] = false
-                    prefs[WidgetPrefsKeys.IS_LOADING] = false
-                }
-                DeepSeekBalanceWidget().update(context, id)
-            }
-            return Result.failure(IllegalStateException("API Key not configured"))
-        }
-
-        // 统一网络拉取一次，分发至所有小组件实例
-        val result = DeepSeekApiClient.fetchBalance(apiKey)
-        val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
-        val threshold = SecureKeyStore.getLowBalanceThreshold(context).toDouble()
-
-        glanceIds.forEach { id ->
-            updateAppWidgetState(context, id) { prefs ->
+        runCatching {
+            updateAppWidgetState(context, glanceId) { prefs ->
                 prefs[WidgetPrefsKeys.IS_CONFIGURED] = true
+            }
+        }
+
+        val result = DeepSeekApiClient.fetchBalance(apiKey)
+        val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        val threshold = SecureKeyStore.getLowBalanceThreshold(context).toDouble()
+
+        result.onSuccess { data ->
+            BalanceCache.save(context, data, timeStr)
+        }.onFailure { err ->
+            BalanceCache.markError(context, err.localizedMessage ?: "Sync Failed")
+        }
+
+        runCatching {
+            updateAppWidgetState(context, glanceId) { prefs ->
                 prefs[WidgetPrefsKeys.IS_LOADING] = false
                 prefs[WidgetPrefsKeys.LAST_REFRESH_TIMESTAMP] = System.currentTimeMillis()
 
@@ -143,18 +106,81 @@ class WidgetSyncRepository(private val context: Context) {
                     prefs[WidgetPrefsKeys.UPDATED_AT] = timeStr
                     prefs[WidgetPrefsKeys.HAS_ERROR] = false
                     prefs[WidgetPrefsKeys.ERROR_MSG] = ""
-                    prefs[WidgetPrefsKeys.IS_LOW_BALANCE] = data.isLowBalance(threshold)
+                    val isLow = data.isLowBalance(threshold)
+                    prefs[WidgetPrefsKeys.IS_LOW_BALANCE] = isLow
+
+                    if (isLow && SecureKeyStore.isLowBalanceNotificationEnabled(context)) {
+                        sendLowBalanceNotification(data.currencySymbol, data.totalBalance)
+                    }
                 }.onFailure { error ->
                     prefs[WidgetPrefsKeys.HAS_ERROR] = true
                     prefs[WidgetPrefsKeys.ERROR_MSG] = error.localizedMessage ?: "Sync Failed"
                 }
             }
-            DeepSeekBalanceWidget().update(context, id)
+            DeepSeekBalanceWidget().update(context, glanceId)
+        }
+        return result
+    }
+
+    /**
+     * 批量同步所有已放置在桌面的组件
+     */
+    suspend fun syncAllWidgets(): Result<BalanceData> {
+        val manager = GlanceAppWidgetManager(context)
+        val glanceIds = runCatching {
+            manager.getGlanceIds(DeepSeekBalanceWidget::class.java)
+        }.getOrDefault(emptyList())
+
+        val apiKey = SecureKeyStore.getApiKey(context)
+        if (apiKey.isNullOrBlank()) {
+            glanceIds.forEach { id ->
+                runCatching {
+                    updateAppWidgetState(context, id) { prefs ->
+                        prefs[WidgetPrefsKeys.IS_CONFIGURED] = false
+                        prefs[WidgetPrefsKeys.IS_LOADING] = false
+                    }
+                    DeepSeekBalanceWidget().update(context, id)
+                }
+            }
+            return Result.failure(IllegalStateException("API Key not configured"))
         }
 
+        // 统一网络拉取一次，分发至所有小组件实例
+        val result = DeepSeekApiClient.fetchBalance(apiKey)
+        val timeStr = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        val threshold = SecureKeyStore.getLowBalanceThreshold(context).toDouble()
+
         result.onSuccess { data ->
+            BalanceCache.save(context, data, timeStr)
             if (data.isLowBalance(threshold) && SecureKeyStore.isLowBalanceNotificationEnabled(context)) {
                 sendLowBalanceNotification(data.currencySymbol, data.totalBalance)
+            }
+        }.onFailure { err ->
+            BalanceCache.markError(context, err.localizedMessage ?: "Sync Failed")
+        }
+
+        glanceIds.forEach { id ->
+            runCatching {
+                updateAppWidgetState(context, id) { prefs ->
+                    prefs[WidgetPrefsKeys.IS_CONFIGURED] = true
+                    prefs[WidgetPrefsKeys.IS_LOADING] = false
+                    prefs[WidgetPrefsKeys.LAST_REFRESH_TIMESTAMP] = System.currentTimeMillis()
+
+                    result.onSuccess { data ->
+                        prefs[WidgetPrefsKeys.TOTAL_BALANCE] = data.totalBalance
+                        prefs[WidgetPrefsKeys.CURRENCY_SYMBOL] = data.currencySymbol
+                        prefs[WidgetPrefsKeys.GRANTED_BALANCE] = data.grantedBalance
+                        prefs[WidgetPrefsKeys.TOPPED_UP_BALANCE] = data.toppedUpBalance
+                        prefs[WidgetPrefsKeys.UPDATED_AT] = timeStr
+                        prefs[WidgetPrefsKeys.HAS_ERROR] = false
+                        prefs[WidgetPrefsKeys.ERROR_MSG] = ""
+                        prefs[WidgetPrefsKeys.IS_LOW_BALANCE] = data.isLowBalance(threshold)
+                    }.onFailure { error ->
+                        prefs[WidgetPrefsKeys.HAS_ERROR] = true
+                        prefs[WidgetPrefsKeys.ERROR_MSG] = error.localizedMessage ?: "Sync Failed"
+                    }
+                }
+                DeepSeekBalanceWidget().update(context, id)
             }
         }
 
