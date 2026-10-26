@@ -49,6 +49,7 @@
     <string name="interval_title">后台同步周期</string>
     <string name="about_title">关于与安全</string>
     <string name="privacy_note">Zero-Plaintext Policy：密钥经 KeyStore 硬件根 AES-256-GCM 加密，仅存本机；本地直连 DeepSeek 官方 API，不设中间服务器。</string>
+    <string name="disclaimer_note">非官方声明：本项目为第三方独立开源工具，仅供个人监控自持 API 额度使用，与 DeepSeek（杭州深度求索人工智能基础技术研究有限公司）无任何官方关联或背书。</string>
     <string name="version_label">版本 %1$s</string>
 
     <string name="remove_dialog_title">移除 API 密钥？</string>

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.3] - 2026-10-26
+
+### 合规与安全声明
+- **补齐标准 Apache License 2.0 协议文件**：
+  - 在仓库根目录正式补齐完整 `LICENSE` 文件，明确项目开源授权范围及免责限制条款（Disclaimer of Warranty & Limitation of Liability）。
+- **应用内新增非官方独立开源声明**：
+  - 在设置抽屉「关于与安全」区域新增醒目的非官方独立工具声明，明确本项目仅供个人监控自持 API 额度使用，与 DeepSeek（杭州深度求索）无任何官方关联或背书，全面规避商标与品牌归属混淆。
+- **文档与宣传页合规声明同步**：
+  - `README.md` 与交互式宣传工作室（`docs/index.html`）全面同步非官方开源声明，并补充开源字体 Space Grotesk（SIL OFL 1.1）的版权致谢。
+
 ## [v1.3.2] - 2026-10-26
 
 ### 修复与优化

@@ -3,6 +3,9 @@
 > 专注、安全、极简的 DeepSeek API 余额监控 Android 原生应用与桌面小组件。  
 > 直连官方 API，无中间服务器，保障 API 密钥与账户隐私。
 
+> [!NOTE]
+> **非官方声明**：本项目为第三方独立开源个人工具，仅供个人方便监控自持 API 额度使用，与 DeepSeek（杭州深度求索人工智能基础技术研究有限公司）无任何官方关联或背书。
+
 ---
 
 ## 📱 核心功能
@@ -61,3 +64,4 @@
 - **GitHub 仓库**：[FloppyPuff/DeepSeek-Balance-Widget-Android](https://github.com/FloppyPuff/DeepSeek-Balance-Widget-Android)
 - **开发者**：[FloppyPuff](https://github.com/FloppyPuff)
 - **开源协议**：[Apache License 2.0](LICENSE)
+- **字体与致谢**：[Space Grotesk](https://github.com/floriankarsten/space-grotesk)（基于 SIL Open Font License 1.1 开源协议）

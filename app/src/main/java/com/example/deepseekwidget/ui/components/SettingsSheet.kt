@@ -520,6 +520,13 @@ fun SettingsSheet(
                 fontSize = 12.sp,
                 lineHeight = 18.sp,
             )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.disclaimer_note),
+                color = palette.tertiaryInk,
+                fontSize = 11.sp,
+                lineHeight = 16.sp,
+            )
         }
     }
 }
