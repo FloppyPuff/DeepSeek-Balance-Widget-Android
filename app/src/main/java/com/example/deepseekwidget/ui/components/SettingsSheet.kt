@@ -1,5 +1,7 @@
 package com.example.deepseekwidget.ui.components
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -32,19 +34,28 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.deepseekwidget.BuildConfig
@@ -75,7 +86,38 @@ fun SettingsSheet(
     onShowUpdateDialog: () -> Unit = {},
 ) {
     val palette = LocalPalette.current
+    val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scrollState = rememberScrollState()
+
+    // 拦截过度上冲的 fling 速度与边界滚动，彻底修复 ModalBottomSheet 内部上下无限震荡跳动 Bug
+    val nestedScrollConnection = remember(sheetState, scrollState) {
+        object : NestedScrollConnection {
+            override suspend fun onPreFling(available: Velocity): Velocity {
+                val isFlingingUp = available.y < 0
+                val isExpanded = sheetState.currentValue == SheetValue.Expanded
+                return if (isFlingingUp && isExpanded) {
+                    available
+                } else {
+                    Velocity.Zero
+                }
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                return available
+            }
+
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val isScrollingUp = available.y < 0
+                val isExpanded = sheetState.currentValue == SheetValue.Expanded
+                return if (isScrollingUp && isExpanded && scrollState.value >= scrollState.maxValue) {
+                    available
+                } else {
+                    Offset.Zero
+                }
+            }
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -98,7 +140,11 @@ fun SettingsSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .verticalScroll(rememberScrollState())
+                .nestedScroll(nestedScrollConnection)
+                .verticalScroll(
+                    state = scrollState,
+                    enabled = sheetState.currentValue == SheetValue.Expanded,
+                )
                 .padding(horizontal = 24.dp)
                 .padding(top = 10.dp, bottom = 28.dp),
         ) {
@@ -419,6 +465,52 @@ fun SettingsSheet(
                         )
                     }
                 }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // GitHub 开发者与开源仓库
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(palette.fieldFill)
+                    .border(1.dp, palette.hairline, RoundedCornerShape(12.dp))
+                    .clickable {
+                        runCatching {
+                            val intent = Intent(
+                                Intent.ACTION_VIEW,
+                                Uri.parse("https://github.com/FloppyPuff/DeepSeek-Balance-Widget-Android")
+                            )
+                            context.startActivity(intent)
+                        }
+                    }
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "开发者：FloppyPuff",
+                        color = palette.primaryInk,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "github.com/FloppyPuff/DeepSeek-Balance-Widget-Android",
+                        color = palette.tertiaryInk,
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "GitHub ↗",
+                    color = palette.accent,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
 
             Spacer(Modifier.height(12.dp))
