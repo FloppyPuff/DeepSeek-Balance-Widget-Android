@@ -11,3 +11,13 @@ captures/
 *.hprof
 *.apk
 *.aab
+
+# Signing & Keystores
+signing.properties
+*.jks
+*.keystore
+*.key
+
+# Temporary files
+release_notes.txt
+*.log
