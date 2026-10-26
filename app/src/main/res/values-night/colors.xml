@@ -1,0 +1,12 @@
+<resources>
+    <color name="ic_launcher_background">#121316</color>
+
+    <!-- Obsidian (Dark Mode) Tokens -->
+    <color name="surface_bg">#E6121316</color>
+    <color name="primary_ink">#FFFFFF</color>
+    <color name="secondary_ink">#8E95A5</color>
+    <color name="muted_ink">#636B78</color>
+    <color name="widget_button_bg">#1AFFFFFF</color>
+    <color name="accent_deepseek">#4D6BFE</color>
+    <color name="status_warning">#FF5252</color>
+</resources>

@@ -3,6 +3,7 @@ package com.example.deepseekwidget.ui.render
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.core.graphics.createBitmap
@@ -32,6 +33,26 @@ object BalanceTypographyRenderer {
                 Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             }.also { cachedTypeface = it }
         }
+    }
+
+    /**
+     * 将余额字符串渲染为高动态自适应遮罩 Bitmap
+     * 整数主体采用纯白不透明 (255)，货币符号与小数采用约 65% 透明度 (166)
+     * 配合 Glance 的 ColorFilter.tint(ColorProvider(R.color.primary_ink))，
+     * 可在日间/暗夜模式下由系统 RemoteViews 自动完成对比度染色并实时无缝切换。
+     */
+    fun renderAdaptiveBalanceBitmap(
+        context: Context,
+        currencySymbol: String,
+        balanceStr: String
+    ): Bitmap {
+        return renderBalanceBitmap(
+            context = context,
+            currencySymbol = currencySymbol,
+            balanceStr = balanceStr,
+            primaryColor = Color.argb(255, 255, 255, 255),
+            secondaryColor = Color.argb(166, 255, 255, 255)
+        )
     }
 
     /**

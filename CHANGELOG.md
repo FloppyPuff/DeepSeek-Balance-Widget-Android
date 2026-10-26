@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.1.1] - 2026-10-26
+
+### 修复与优化
+- **修复小组件无法自动跟随系统日间/暗夜模式 Bug**：
+  - **语义化资源重构**：全面接入 Android 资源层 `ColorProvider(R.color.*)`，在 `res/values/colors.xml`（Alabaster 亮色）与 `res/values-night/colors.xml`（Obsidian 暗色）中定义完整的底板背景（`#F2F7F8FA` / `#E6121316`）、主次文本、按钮微透光底色及状态指示灯。
+  - **艺术字位图自适应染色**：核心排版位图重构为高精度 Alpha 遮罩离屏光栅化，结合 Glance 的 `ColorFilter.tint(ColorProvider(R.color.primary_ink))`，在系统切换日间/暗夜模式时，由系统 RemoteViews 引擎实时自动重绘着色，无需任何手动刷新或后台唤醒，彻底解决浅色模式下白字隐形问题。
+  - **刷新按钮矢量着色**：刷新图标绑定 `@color/primary_ink`，在日间自动呈现深墨色、暗夜自动呈现亮白色。
+
 ## [v1.1.0] - 2026-10-26
 
 ### 新增特性

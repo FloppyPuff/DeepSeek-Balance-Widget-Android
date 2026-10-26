@@ -1,12 +1,12 @@
 package com.example.deepseekwidget.ui
 
 import android.content.Context
-import android.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.Preferences
+import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.Image
@@ -32,7 +32,6 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
-import androidx.glance.layout.width
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
@@ -45,12 +44,13 @@ import com.example.deepseekwidget.ui.render.BalanceTypographyRenderer
 /**
  * DeepSeek 余额监控小组件（Jetpack Glance）
  *
- * 设计定位：极简主义（Minimalism）、高对比度排版（Editorial Typography）、零冗余交互。
- * 自适应响应：
- * - 2×1（紧凑横幅）：单行顶栏（品牌+刷新键），核心艺术字，底部紧凑更新状态。
- * - 2×2（方形大卡）：顶栏极简放宽防挤压（品牌与独立刷新键，绝无溢出裁切），中部超大艺术字，
- *   底部双列清晰展示 Granted 与 Top-up 明细，并在独立行标注更新时间，彻底告别单行文字折行挤压。
- * - 3×1 / 4×1 / 3×2（宽屏尺寸）：展开展示完整品牌、更新时间、胶囊明细。
+ * 全面支持系统日间/暗夜模式自适应（Day/Night Mode Auto-Switching）：
+ * - 纯资源语义绑定（values/colors.xml 与 values-night/colors.xml）：
+ *   底层采用系统级 ColorProvider(R.color.*)，在系统切换暗色/亮色模式时由 Android RemoteViews
+ *   引擎直接自动重绘，零延迟、零能耗、无需手动刷新。
+ * - 艺术字排版位图自适应染色：
+ *   离屏 Canvas 输出高精度 Alpha 遮罩，经由 ColorFilter.tint(ColorProvider(R.color.primary_ink))
+ *   在日间（Alabaster 深墨字）与暗夜（Obsidian 亮白字）间自动完成完美色彩过渡。
  */
 class DeepSeekBalanceWidget : GlanceAppWidget() {
 
@@ -93,7 +93,7 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
     }
 
     /**
-     * 未配置状态卡片
+     * 未配置状态卡片（自适应日间/暗夜模式）
      */
     @Composable
     private fun UnconfiguredCard(size: DpSize) {
@@ -102,7 +102,7 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(ColorProvider(androidx.compose.ui.graphics.Color(0xE6121316)))
+                .background(ColorProvider(R.color.surface_bg))
                 .cornerRadius(22.dp)
                 .padding(horizontal = 14.dp, vertical = 12.dp)
                 .clickable(actionStartActivity<MainActivity>())
@@ -114,14 +114,14 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                 Text(
                     text = "● ",
                     style = TextStyle(
-                        color = ColorProvider(androidx.compose.ui.graphics.Color(0xFFFFB300)),
+                        color = ColorProvider(R.color.status_warning),
                         fontSize = 10.sp
                     )
                 )
                 Text(
                     text = "DEEPSEEK",
                     style = TextStyle(
-                        color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF8E95A5)),
+                        color = ColorProvider(R.color.secondary_ink),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -133,7 +133,7 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
             Text(
                 text = "Tap to configure Key",
                 style = TextStyle(
-                    color = ColorProvider(androidx.compose.ui.graphics.Color(0xFFFFFFFF)),
+                    color = ColorProvider(R.color.primary_ink),
                     fontSize = if (isTall) 16.sp else 14.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -143,7 +143,7 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                 Text(
                     text = "点击小组件进入应用配置 API Key",
                     style = TextStyle(
-                        color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF8E95A5)),
+                        color = ColorProvider(R.color.secondary_ink),
                         fontSize = 11.sp
                     ),
                     modifier = GlanceModifier.padding(top = 4.dp)
@@ -155,7 +155,7 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
     }
 
     /**
-     * 自适应尺寸渲染卡片
+     * 自适应尺寸与日夜模式卡片
      */
     @Composable
     private fun AdaptiveBalanceCard(
@@ -173,29 +173,28 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
         val isTall = size.height >= 105.dp
         val isWide = size.width >= 195.dp
 
-        // 生成艺术字体 Bitmap
-        val balanceBitmap = BalanceTypographyRenderer.renderBalanceBitmap(
+        // 生成高动态范围艺术字体自适应遮罩位图
+        val balanceBitmap = BalanceTypographyRenderer.renderAdaptiveBalanceBitmap(
             context = context,
             currencySymbol = symbol,
-            balanceStr = balance,
-            primaryColor = Color.parseColor("#FFFFFF"),
-            secondaryColor = Color.parseColor("#8E95A5")
+            balanceStr = balance
         )
 
+        // 状态指示点颜色绑定
         val statusDotColor = when {
-            hasError || isLowBalance -> androidx.compose.ui.graphics.Color(0xFFFF5252)
-            else -> androidx.compose.ui.graphics.Color(0xFF4D6BFE)
+            hasError || isLowBalance -> ColorProvider(R.color.status_warning)
+            else -> ColorProvider(R.color.accent_deepseek)
         }
 
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(ColorProvider(androidx.compose.ui.graphics.Color(0xE6121316)))
+                .background(ColorProvider(R.color.surface_bg))
                 .cornerRadius(22.dp)
                 .padding(horizontal = 14.dp, vertical = 12.dp)
                 .clickable(actionStartActivity<MainActivity>())
         ) {
-            // 1. 顶部状态栏：根据宽度决定是否在顶栏容纳时间戳，彻底规避 2×2 / 2×1 挤压剪裁
+            // 1. 顶部状态栏：根据宽度决定是否在顶栏容纳时间戳，彻底规避挤压裁切
             Row(
                 modifier = GlanceModifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -205,14 +204,14 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                     Text(
                         text = "● ",
                         style = TextStyle(
-                            color = ColorProvider(statusDotColor),
+                            color = statusDotColor,
                             fontSize = 10.sp
                         )
                     )
                     Text(
                         text = "DEEPSEEK",
                         style = TextStyle(
-                            color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF8E95A5)),
+                            color = ColorProvider(R.color.secondary_ink),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -226,23 +225,24 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                     Text(
                         text = if (isLoading) "Syncing..." else updatedAt,
                         style = TextStyle(
-                            color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF636B78)),
+                            color = ColorProvider(R.color.muted_ink),
                             fontSize = 11.sp
                         ),
                         modifier = GlanceModifier.padding(end = 6.dp)
                     )
                 }
 
-                // 独立刷新按钮（固定 28dp，安全锚定在右边界内部，杜绝裁切）
+                // 独立刷新按钮（日夜模式自适应底色与图标）
                 RefreshButton()
             }
 
             Spacer(modifier = GlanceModifier.defaultWeight())
 
-            // 2. 核心视觉区：艺术字体余额位图展示
+            // 2. 核心视觉区：艺术字体余额位图展示（配合 ColorFilter 自动随日间/暗夜模式着色）
             Image(
                 provider = ImageProvider(balanceBitmap),
                 contentDescription = "Balance $symbol$balance",
+                colorFilter = ColorFilter.tint(ColorProvider(R.color.primary_ink)),
                 modifier = GlanceModifier.height(if (isTall) 50.dp else 44.dp)
             )
 
@@ -261,14 +261,14 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                                 Text(
                                     text = "Granted",
                                     style = TextStyle(
-                                        color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF8E95A5)),
+                                        color = ColorProvider(R.color.secondary_ink),
                                         fontSize = 10.sp
                                     )
                                 )
                                 Text(
                                     text = "$symbol$granted",
                                     style = TextStyle(
-                                        color = ColorProvider(androidx.compose.ui.graphics.Color(0xFFFFFFFF)),
+                                        color = ColorProvider(R.color.primary_ink),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -281,14 +281,14 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                                 Text(
                                     text = "Top-up",
                                     style = TextStyle(
-                                        color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF8E95A5)),
+                                        color = ColorProvider(R.color.secondary_ink),
                                         fontSize = 10.sp
                                     )
                                 )
                                 Text(
                                     text = "$symbol$toppedUp",
                                     style = TextStyle(
-                                        color = ColorProvider(androidx.compose.ui.graphics.Color(0xFFFFFFFF)),
+                                        color = ColorProvider(R.color.primary_ink),
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -306,9 +306,7 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                     Text(
                         text = if (isLoading) "● Syncing..." else "Updated $updatedAt",
                         style = TextStyle(
-                            color = ColorProvider(
-                                androidx.compose.ui.graphics.Color(if (isLoading) 0xFF4D6BFE else 0xFF636B78)
-                            ),
+                            color = if (isLoading) ColorProvider(R.color.accent_deepseek) else ColorProvider(R.color.muted_ink),
                             fontSize = 10.sp
                         )
                     )
@@ -324,7 +322,7 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                         Text(
                             text = "Granted: $symbol$granted  |  Top-up: $symbol$toppedUp",
                             style = TextStyle(
-                                color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF636B78)),
+                                color = ColorProvider(R.color.muted_ink),
                                 fontSize = 10.sp
                             )
                         )
@@ -333,9 +331,7 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                         Text(
                             text = if (isLoading) "● Syncing..." else "Updated $updatedAt",
                             style = TextStyle(
-                                color = ColorProvider(
-                                    androidx.compose.ui.graphics.Color(if (isLoading) 0xFF4D6BFE else 0xFF636B78)
-                                ),
+                                color = if (isLoading) ColorProvider(R.color.accent_deepseek) else ColorProvider(R.color.muted_ink),
                                 fontSize = 10.sp
                             )
                         )
@@ -351,13 +347,14 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
             modifier = GlanceModifier
                 .size(28.dp)
                 .cornerRadius(14.dp)
-                .background(ColorProvider(androidx.compose.ui.graphics.Color(0x1AFFFFFF)))
+                .background(ColorProvider(R.color.widget_button_bg))
                 .clickable(onClick = actionRunCallback<RefreshBalanceAction>()),
             contentAlignment = Alignment.Center
         ) {
             Image(
                 provider = ImageProvider(R.drawable.ic_refresh_minimal),
                 contentDescription = "Refresh Balance",
+                colorFilter = ColorFilter.tint(ColorProvider(R.color.primary_ink)),
                 modifier = GlanceModifier.size(14.dp)
             )
         }
