@@ -15,6 +15,7 @@ object SecureKeyStore {
     private const val KEY_LOW_BALANCE_THRESHOLD = "low_balance_threshold"
     private const val KEY_SYNC_INTERVAL_MINUTES = "sync_interval_minutes"
     private const val KEY_NOTIFY_LOW_BALANCE = "notify_low_balance"
+    private const val KEY_THEME_MODE = "theme_mode"
 
     @Volatile
     private var cachedPrefs: SharedPreferences? = null
@@ -85,5 +86,27 @@ object SecureKeyStore {
         getEncryptedPrefs(context).edit()
             .putBoolean(KEY_NOTIFY_LOW_BALANCE, enabled)
             .apply()
+    }
+
+    fun getThemeMode(context: Context): ThemeMode {
+        val name = getEncryptedPrefs(context).getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name)
+        return runCatching { ThemeMode.valueOf(name ?: ThemeMode.SYSTEM.name) }.getOrDefault(ThemeMode.SYSTEM)
+    }
+
+    fun setThemeMode(context: Context, mode: ThemeMode) {
+        getEncryptedPrefs(context).edit()
+            .putString(KEY_THEME_MODE, mode.name)
+            .apply()
+    }
+
+    fun getMaskedApiKey(context: Context): String? {
+        val key = getApiKey(context) ?: return null
+        return if (key.length <= 8) {
+            "••••••••"
+        } else {
+            val prefix = if (key.startsWith("sk-")) "sk-" else key.take(3)
+            val suffix = key.takeLast(4)
+            "${prefix}••••••••••••${suffix}"
+        }
     }
 }

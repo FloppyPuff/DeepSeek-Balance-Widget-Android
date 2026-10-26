@@ -1,90 +1,104 @@
 package com.example.deepseekwidget.ui
 
-import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.ContentPaste
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.deepseekwidget.R
-import com.example.deepseekwidget.data.BalanceData
-import com.example.deepseekwidget.ui.render.BalanceTypographyRenderer
-import com.example.deepseekwidget.ui.theme.AccentDeepSeek
-import com.example.deepseekwidget.ui.theme.DeepSeekWidgetTheme
-import com.example.deepseekwidget.ui.theme.ObsidianBorder
-import com.example.deepseekwidget.ui.theme.ObsidianCardBg
-import com.example.deepseekwidget.ui.theme.ObsidianMutedInk
-import com.example.deepseekwidget.ui.theme.ObsidianPrimaryInk
-import com.example.deepseekwidget.ui.theme.ObsidianSecondaryInk
-import com.example.deepseekwidget.ui.theme.ObsidianSurfaceBg
-import com.example.deepseekwidget.ui.theme.StatusSuccess
-import com.example.deepseekwidget.ui.theme.StatusWarningDark
+import com.example.deepseekwidget.ui.components.EyeGlyph
+import com.example.deepseekwidget.ui.components.LockGlyph
+import com.example.deepseekwidget.ui.components.PlusGlyph
+import com.example.deepseekwidget.ui.components.RefreshGlyph
+import com.example.deepseekwidget.ui.components.SettingsSheet
+import com.example.deepseekwidget.ui.components.SlidersGlyph
+import com.example.deepseekwidget.ui.components.WidgetPreviewCard
+import com.example.deepseekwidget.ui.theme.DeepSeekTheme
+import com.example.deepseekwidget.ui.theme.DisplayFontFamily
+import com.example.deepseekwidget.ui.theme.LocalPalette
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
@@ -93,8 +107,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
         setContent {
-            DeepSeekWidgetTheme {
+            val uiState by viewModel.uiState.collectAsState()
+            DeepSeekTheme(themeMode = uiState.themeMode) {
                 MainScreen(viewModel = viewModel)
             }
         }
@@ -105,813 +121,920 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
     val uiState by viewModel.uiState.collectAsState()
+    val palette = LocalPalette.current
     val context = LocalContext.current
+    val keyboard = LocalSoftwareKeyboardController.current
     val clipboardManager = LocalClipboardManager.current
-    val scrollState = rememberScrollState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = ObsidianSurfaceBg
-    ) { innerPadding ->
+    var showSettings by rememberSaveable { mutableStateOf(false) }
+    var showRemoveDialog by rememberSaveable { mutableStateOf(false) }
+    var editingKey by rememberSaveable { mutableStateOf(false) }
+    var keyVisible by rememberSaveable { mutableStateOf(false) }
+    var keyDraft by remember { mutableStateOf("") }
+    var localErrorText by remember { mutableStateOf<String?>(null) }
+    val keyFocusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(editingKey) {
+        if (editingKey) {
+            delay(150)
+            runCatching { keyFocusRequester.requestFocus() }
+        }
+    }
+
+    LaunchedEffect(uiState.successMessage) {
+        uiState.successMessage?.let {
+            snackbarHostState.showSnackbar(it)
+        }
+    }
+
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+        }
+    }
+
+    fun submitKey() {
+        if (uiState.isLoading) return
+        val trimmed = keyDraft.trim()
+        when {
+            trimmed.isEmpty() -> localErrorText = "请输入有效的 DeepSeek API 密钥"
+            trimmed.length < 12 -> localErrorText = "密钥长度过短 (少于 12 位)"
+            else -> {
+                localErrorText = null
+                keyboard?.hide()
+                viewModel.onApiKeyChanged(trimmed)
+                viewModel.saveKeyAndSyncWidgets()
+                editingKey = false
+                keyDraft = ""
+                keyVisible = false
+            }
+        }
+    }
+
+    fun addWidgetToHome() {
+        val pinned = viewModel.requestPinWidget(context)
+        Toast.makeText(
+            context,
+            if (pinned) R.string.toast_widget_pin_prompt else R.string.toast_widget_pin_unavailable,
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+
+    val glowColor = palette.accent.copy(alpha = if (palette.isDark) 0.13f else 0.055f)
+    val backgroundBrush = Brush.verticalGradient(
+        colors = listOf(palette.canvas, palette.canvasEdge),
+    )
+
+    Box(modifier = Modifier.fillMaxSize().background(backgroundBrush)) {
+        // 背景顶部右上方微弱径向氛围光
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .drawBehind {
+                    val radius = size.width * 0.95f
+                    val center = Offset(size.width * 0.88f, -size.height * 0.02f)
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(glowColor, Color.Transparent),
+                            center = center,
+                            radius = radius,
+                        ),
+                        radius = radius,
+                        center = center,
+                    )
+                },
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(scrollState)
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .imePadding(),
         ) {
-            // 顶栏：品牌标识与状态
-            HeaderSection(isConfigured = uiState.isConfigured)
-
-            // 凭证配置区
-            KeyInputCard(
-                apiKey = uiState.apiKey,
-                isKeyVisible = uiState.isKeyVisible,
-                isLoading = uiState.isLoading,
-                onKeyChanged = { viewModel.onApiKeyChanged(it) },
-                onToggleVisibility = { viewModel.toggleKeyVisibility() },
-                onPaste = {
-                    clipboardManager.getText()?.text?.let { viewModel.onApiKeyChanged(it) }
-                },
-                onTestConnection = { viewModel.testAndFetchBalance() },
-                onSaveAndSync = { viewModel.saveKeyAndSyncWidgets() },
-                onClear = { viewModel.clearKey() }
+            // 顶栏：品牌标识 + 状态指示灯 + 设置入口
+            Header(
+                isConfigured = uiState.isConfigured,
+                onSettingsClick = { showSettings = true },
             )
 
-            // 状态提示反馈
-            StatusFeedback(
-                errorMessage = uiState.errorMessage,
-                successMessage = uiState.successMessage
-            )
-
-            // 实时余额卡片
-            uiState.balanceData?.let { data ->
-                LiveBalanceCard(data = data)
-            }
-
-            // 小组件所见即所得渲染预览
-            WidgetPreviewSection(
-                uiState = uiState,
-                onToggleMode = { viewModel.togglePreviewMode() },
-                onToggleSize = { viewModel.togglePreviewSize() },
-                onRefreshClick = { viewModel.testAndFetchBalance() }
-            )
-
-            // 同步与告警配置
-            PreferencesSection(
-                currentThreshold = uiState.lowBalanceThreshold,
-                customThresholdInput = uiState.customThresholdInput,
-                currentBalance = uiState.balanceData,
-                currentInterval = uiState.syncIntervalMinutes,
-                onThresholdSelected = { viewModel.setThreshold(it) },
-                onCustomThresholdChanged = { viewModel.onCustomThresholdInputChanged(it) },
-                onIntervalSelected = { viewModel.setInterval(it) },
-                onPinWidget = {
-                    val pinned = viewModel.requestPinWidget(context)
-                    val msg = if (pinned) "已发送添加小组件请求至桌面" else "当前桌面暂不支持自动添加，请手动长按桌面添加"
-                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                }
-            )
-
-            // 架构与安全背书
-            ArchitectureSecurityCard()
-
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-fun HeaderSection(isConfigured: Boolean) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(if (isConfigured) AccentDeepSeek else StatusWarningDark)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "DEEPSEEK API",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = ObsidianSecondaryInk,
-                    letterSpacing = 1.sp
-                )
-            }
-            Text(
-                text = "余额监控小组件",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = ObsidianPrimaryInk,
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = ObsidianCardBg,
-            border = androidx.compose.foundation.BorderStroke(1.dp, ObsidianBorder)
-        ) {
-            Text(
-                text = "v1.0 Glance",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = AccentDeepSeek,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-            )
-        }
-    }
-}
-
-@Composable
-fun KeyInputCard(
-    apiKey: String,
-    isKeyVisible: Boolean,
-    isLoading: Boolean,
-    onKeyChanged: (String) -> Unit,
-    onToggleVisibility: () -> Unit,
-    onPaste: () -> Unit,
-    onTestConnection: () -> Unit,
-    onSaveAndSync: () -> Unit,
-    onClear: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = ObsidianCardBg,
-        border = androidx.compose.foundation.BorderStroke(1.dp, ObsidianBorder)
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Lock,
-                    contentDescription = null,
-                    tint = AccentDeepSeek,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "API Key 凭证配置",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = ObsidianPrimaryInk
-                )
-            }
-
-            OutlinedTextField(
-                value = apiKey,
-                onValueChange = onKeyChanged,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = {
-                    Text("sk-...", color = ObsidianMutedInk, fontSize = 14.sp)
-                },
-                visualTransformation = if (isKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = onToggleVisibility) {
-                            Icon(
-                                imageVector = if (isKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = "Toggle Visibility",
-                                tint = ObsidianSecondaryInk
-                            )
-                        }
-                        IconButton(onClick = onPaste) {
-                            Icon(
-                                imageVector = Icons.Default.ContentPaste,
-                                contentDescription = "Paste",
-                                tint = ObsidianSecondaryInk
-                            )
-                        }
-                    }
-                },
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentDeepSeek,
-                    unfocusedBorderColor = ObsidianBorder,
-                    focusedTextColor = ObsidianPrimaryInk,
-                    unfocusedTextColor = ObsidianPrimaryInk,
-                    cursorColor = AccentDeepSeek
-                ),
-                shape = RoundedCornerShape(12.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onTestConnection,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = ObsidianPrimaryInk),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, ObsidianBorder),
-                    enabled = !isLoading && apiKey.isNotBlank()
-                ) {
-                    if (isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = ObsidianPrimaryInk, strokeWidth = 2.dp)
-                    } else {
-                        Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("测试连接", fontSize = 13.sp)
-                    }
-                }
-
-                Button(
-                    onClick = onSaveAndSync,
-                    modifier = Modifier.weight(1.3f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentDeepSeek),
-                    enabled = !isLoading && apiKey.isNotBlank()
-                ) {
-                    Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("保存并同步组件", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-
-            if (apiKey.isNotBlank()) {
-                Text(
-                    text = "清除本地加密凭证",
-                    fontSize = 12.sp,
-                    color = StatusWarningDark,
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .clickable { onClear() }
-                        .padding(top = 2.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun StatusFeedback(errorMessage: String?, successMessage: String?) {
-    if (!errorMessage.isNullOrBlank()) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            color = Color(0x26FF5252),
-            border = androidx.compose.foundation.BorderStroke(1.dp, StatusWarningDark)
-        ) {
-            Text(
-                text = errorMessage,
-                color = StatusWarningDark,
-                fontSize = 13.sp,
-                modifier = Modifier.padding(12.dp)
-            )
-        }
-    } else if (!successMessage.isNullOrBlank()) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            color = Color(0x2600C853),
-            border = androidx.compose.foundation.BorderStroke(1.dp, StatusSuccess)
-        ) {
-            Text(
-                text = successMessage,
-                color = StatusSuccess,
-                fontSize = 13.sp,
-                modifier = Modifier.padding(12.dp)
-            )
-        }
-    }
-}
-
-@Composable
-fun LiveBalanceCard(data: BalanceData) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = ObsidianCardBg,
-        border = androidx.compose.foundation.BorderStroke(1.dp, ObsidianBorder)
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "账户余额详情",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = ObsidianPrimaryInk
-                )
-
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (data.isAvailable) Color(0x2600C853) else Color(0x26FF5252)
-                ) {
-                    Text(
-                        text = if (data.isAvailable) "API 可用" else "服务受限",
-                        color = if (data.isAvailable) StatusSuccess else StatusWarningDark,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            // 大数字展示
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = data.currencySymbol,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = ObsidianSecondaryInk,
-                    modifier = Modifier.padding(bottom = 4.dp, end = 4.dp)
-                )
-                Text(
-                    text = data.totalBalance,
-                    fontSize = 38.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = ObsidianPrimaryInk
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "赠送金余额", fontSize = 11.sp, color = ObsidianSecondaryInk)
-                    Text(
-                        text = "${data.currencySymbol}${data.grantedBalance}",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = ObsidianPrimaryInk
-                    )
-                }
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(text = "充值金余额", fontSize = 11.sp, color = ObsidianSecondaryInk)
-                    Text(
-                        text = "${data.currencySymbol}${data.toppedUpBalance}",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = ObsidianPrimaryInk
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun WidgetPreviewSection(
-    uiState: MainUiState,
-    onToggleMode: () -> Unit,
-    onToggleSize: () -> Unit,
-    onRefreshClick: () -> Unit
-) {
-    val context = LocalContext.current
-    val isDark = uiState.previewDarkMode
-    val is2x2 = uiState.previewIs2x2
-
-    val displaySymbol = uiState.balanceData?.currencySymbol ?: "¥"
-    val displayBalance = uiState.balanceData?.totalBalance ?: "2.43"
-    val displayGranted = uiState.balanceData?.grantedBalance ?: "0.00"
-    val displayToppedUp = uiState.balanceData?.toppedUpBalance ?: "2.43"
-
-    // 艺术字 Bitmap 离屏渲染测试
-    val previewBitmap = BalanceTypographyRenderer.renderBalanceBitmap(
-        context = context,
-        currencySymbol = displaySymbol,
-        balanceStr = displayBalance,
-        primaryColor = if (isDark) AndroidColor.parseColor("#FFFFFF") else AndroidColor.parseColor("#111318"),
-        secondaryColor = if (isDark) AndroidColor.parseColor("#8E95A5") else AndroidColor.parseColor("#636B78")
-    )
-
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Widgets,
-                    contentDescription = null,
-                    tint = AccentDeepSeek,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "桌面小组件预览 (${if (is2x2) "2×2 方形大卡" else "2×1 紧凑横幅"})",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = ObsidianPrimaryInk
-                )
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = AccentDeepSeek.copy(alpha = 0.15f),
-                    modifier = Modifier.clickable { onToggleSize() }
-                ) {
-                    Text(
-                        text = if (is2x2) "切到 2×1" else "切到 2×2",
-                        color = AccentDeepSeek,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-
-                IconButton(onClick = onToggleMode) {
-                    Icon(
-                        imageVector = if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
-                        contentDescription = "Toggle Mode",
-                        tint = ObsidianSecondaryInk
-                    )
-                }
-            }
-        }
-
-        // 小组件仿真实体容器（宽度固定类似 2 列宽度，模拟真实桌面）
-        Box(
-            modifier = Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.Center
-        ) {
-            Surface(
+            Column(
                 modifier = Modifier
-                    .width(if (is2x2) 180.dp else 260.dp)
-                    .height(if (is2x2) 180.dp else 120.dp),
-                shape = RoundedCornerShape(22.dp),
-                color = if (isDark) Color(0xE6121316) else Color(0xF2F7F8FA),
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    if (isDark) Color(0x33FFFFFF) else Color(0x1F000000)
-                )
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                        .widthIn(max = 560.dp)
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(bottom = 32.dp),
                 ) {
-                    // 1. 顶栏：左侧品牌，右侧刷新键，彻底杜绝折行挤压与裁切
+                    Spacer(Modifier.height(14.dp))
+
+                    // 小组件预览区标题与尺寸切换
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "● ",
-                                color = AccentDeepSeek,
-                                fontSize = 10.sp
-                            )
-                            Text(
-                                text = "DEEPSEEK",
-                                color = if (isDark) Color(0xFF8E95A5) else Color(0xFF636B78),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.weight(1f))
-
-                        if (!is2x2) {
-                            Text(
-                                text = if (uiState.isLoading) "Syncing..." else "23:45",
-                                color = if (isDark) Color(0xFF636B78) else Color(0xFF9EA6B4),
-                                fontSize = 11.sp,
-                                modifier = Modifier.padding(end = 6.dp)
-                            )
-                        }
-
+                        Text(
+                            text = stringResource(R.string.preview_label),
+                            color = palette.secondaryInk,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.4.sp,
+                        )
+                        Spacer(Modifier.weight(1f))
                         Box(
                             modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(if (isDark) Color(0x1AFFFFFF) else Color(0x12000000))
-                                .clickable { onRefreshClick() },
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(palette.chipFill)
+                                .border(1.dp, palette.hairline, RoundedCornerShape(8.dp))
+                                .clickable { viewModel.togglePreviewSize() }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_refresh_minimal),
-                                contentDescription = "Refresh",
-                                tint = if (isDark) Color.White else Color(0xFF111318),
-                                modifier = Modifier.size(14.dp)
+                            Text(
+                                text = if (uiState.previewIs2x2) "2 × 2" else "2 × 1",
+                                color = palette.accent,
+                                fontFamily = DisplayFontFamily,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = 0.8.sp,
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(Modifier.height(12.dp))
 
-                    // 2. 核心区：艺术字位图
-                    Image(
-                        bitmap = previewBitmap.asImageBitmap(),
-                        contentDescription = "Balance",
-                        modifier = Modifier.height(if (is2x2) 50.dp else 44.dp)
+                    // 小组件实时所见即所得卡片
+                    WidgetPreviewCard(
+                        isConfigured = uiState.isConfigured,
+                        balanceData = uiState.balanceData,
+                        isLoading = uiState.isLoading,
+                        errorMessage = uiState.errorMessage,
+                        is2x2 = uiState.previewIs2x2,
+                        lowBalanceThreshold = uiState.lowBalanceThreshold,
+                        onRefresh = { viewModel.testAndFetchBalance() },
                     )
 
-                    Spacer(modifier = Modifier.weight(1f))
+                    // 预览底部元数据与重试
+                    PreviewMeta(
+                        isConfigured = uiState.isConfigured,
+                        errorMessage = uiState.errorMessage,
+                        isLoading = uiState.isLoading,
+                        onRetry = { viewModel.testAndFetchBalance() },
+                    )
 
-                    // 3. 底栏区域
-                    if (is2x2) {
-                        // 2×2：双列明细 + 独立行时间戳，零文字折叠挤压
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Granted",
-                                    color = if (isDark) Color(0xFF8E95A5) else Color(0xFF636B78),
-                                    fontSize = 10.sp
-                                )
-                                Text(
-                                    text = "$displaySymbol$displayGranted",
-                                    color = if (isDark) Color.White else Color(0xFF111318),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Top-up",
-                                    color = if (isDark) Color(0xFF8E95A5) else Color(0xFF636B78),
-                                    fontSize = 10.sp
-                                )
-                                Text(
-                                    text = "$displaySymbol$displayToppedUp",
-                                    color = if (isDark) Color.White else Color(0xFF111318),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+                    Spacer(Modifier.height(28.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(palette.hairline),
+                    )
+                    Spacer(Modifier.height(22.dp))
+
+                    // API 密钥区域标题
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Text(
-                            text = if (uiState.isLoading) "● Syncing..." else "Updated 23:45",
-                            color = if (isDark) Color(0xFF636B78) else Color(0xFF9EA6B4),
-                            fontSize = 10.sp,
-                            modifier = Modifier.padding(top = 4.dp)
+                            text = stringResource(R.string.key_section_title),
+                            color = palette.primaryInk,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
                         )
-                    } else {
-                        // 2×1
+                        Spacer(Modifier.weight(1f))
+                        Box(
+                            modifier = Modifier
+                                .size(5.dp)
+                                .background(
+                                    if (uiState.isConfigured) palette.accent else palette.tertiaryInk,
+                                    CircleShape,
+                                ),
+                        )
+                        Spacer(Modifier.width(6.dp))
                         Text(
-                            text = "Granted: $displaySymbol$displayGranted  |  Top-up: $displaySymbol$displayToppedUp",
-                            color = if (isDark) Color(0xFF636B78) else Color(0xFF9EA6B4),
-                            fontSize = 10.sp
+                            text = stringResource(
+                                if (uiState.isConfigured) R.string.key_configured
+                                else R.string.key_not_configured,
+                            ),
+                            color = palette.tertiaryInk,
+                            fontSize = 11.sp,
                         )
                     }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    // API 密钥输入 / 锁定状态卡片
+                    KeySection(
+                        isConfigured = uiState.isConfigured,
+                        maskedKey = uiState.maskedKey,
+                        keyDraft = keyDraft,
+                        keyVisible = keyVisible,
+                        editingKey = editingKey,
+                        localErrorText = localErrorText,
+                        isLoading = uiState.isLoading,
+                        onKeyDraftChange = {
+                            keyDraft = it
+                            localErrorText = null
+                        },
+                        onToggleVisibility = { keyVisible = !keyVisible },
+                        onEditRequest = {
+                            editingKey = true
+                            keyDraft = ""
+                            keyVisible = false
+                            localErrorText = null
+                        },
+                        onSubmit = ::submitKey,
+                        onPaste = {
+                            clipboardManager.getText()?.text?.let {
+                                keyDraft = it.trim()
+                                localErrorText = null
+                            }
+                        },
+                        focusRequester = keyFocusRequester,
+                    )
+
+                    // 操作按钮组
+                    if (editingKey || !uiState.isConfigured) {
+                        Spacer(Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            PrimaryActionButton(
+                                text = stringResource(
+                                    when {
+                                        uiState.isLoading -> R.string.key_saving
+                                        uiState.isConfigured -> R.string.key_save
+                                        else -> R.string.key_save_sync
+                                    },
+                                ),
+                                enabled = keyDraft.isNotBlank() && !uiState.isLoading,
+                                loading = uiState.isLoading,
+                                onClick = ::submitKey,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (uiState.isConfigured) {
+                                TextButton(
+                                    onClick = {
+                                        editingKey = false
+                                        keyDraft = ""
+                                        keyVisible = false
+                                        localErrorText = null
+                                        keyboard?.hide()
+                                    },
+                                    enabled = !uiState.isLoading,
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.key_cancel),
+                                        color = palette.secondaryInk,
+                                        fontSize = 13.sp,
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Spacer(Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            PrimaryActionButton(
+                                text = stringResource(
+                                    if (uiState.isLoading) R.string.state_syncing
+                                    else R.string.action_sync,
+                                ),
+                                enabled = !uiState.isLoading,
+                                loading = uiState.isLoading,
+                                leadingIcon = {
+                                    if (!uiState.isLoading) {
+                                        RefreshGlyph(tint = palette.onAccent, size = 15.dp)
+                                    }
+                                },
+                                onClick = { viewModel.testAndFetchBalance() },
+                                modifier = Modifier.weight(1f),
+                            )
+                            SecondaryActionButton(
+                                text = stringResource(R.string.action_add_widget),
+                                onClick = ::addWidgetToHome,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(26.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(palette.hairline),
+                    )
+                    Spacer(Modifier.height(20.dp))
+
+                    // 策略与监控实时概览卡片
+                    StrategyOverviewCard(
+                        threshold = uiState.lowBalanceThreshold,
+                        intervalMinutes = uiState.syncIntervalMinutes,
+                        balanceData = uiState.balanceData,
+                        onOpenSettings = { showSettings = true }
+                    )
                 }
             }
         }
+
+        // 底部提示浮条
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .imePadding()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        ) { data ->
+            Snackbar(
+                snackbarData = data,
+                containerColor = palette.surfaceHighlight,
+                contentColor = palette.primaryInk,
+                actionColor = palette.accent,
+                shape = RoundedCornerShape(14.dp),
+            )
+        }
     }
-}
 
-@Composable
-fun PreferencesSection(
-    currentThreshold: Float,
-    customThresholdInput: String,
-    currentBalance: BalanceData?,
-    currentInterval: Long,
-    onThresholdSelected: (Float) -> Unit,
-    onCustomThresholdChanged: (String) -> Unit,
-    onIntervalSelected: (Long) -> Unit,
-    onPinWidget: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = ObsidianCardBg,
-        border = androidx.compose.foundation.BorderStroke(1.dp, ObsidianBorder)
-    ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Tune,
-                    contentDescription = null,
-                    tint = AccentDeepSeek,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+    // 设置底部抽屉
+    if (showSettings) {
+        SettingsSheet(
+            themeMode = uiState.themeMode,
+            onThemeModeChange = { viewModel.setThemeMode(it) },
+            hasKey = uiState.isConfigured,
+            currentThreshold = uiState.lowBalanceThreshold,
+            customThresholdInput = uiState.customThresholdInput,
+            currentBalance = uiState.balanceData,
+            currentInterval = uiState.syncIntervalMinutes,
+            onThresholdSelected = { viewModel.setThreshold(it) },
+            onCustomThresholdChanged = { viewModel.onCustomThresholdInputChanged(it) },
+            onIntervalSelected = { viewModel.setInterval(it) },
+            onDismiss = { showSettings = false },
+            onRemoveKeyRequest = {
+                showSettings = false
+                showRemoveDialog = true
+            },
+        )
+    }
+
+    // 移除凭据确认弹窗
+    if (showRemoveDialog) {
+        AlertDialog(
+            onDismissRequest = { showRemoveDialog = false },
+            containerColor = palette.surface,
+            titleContentColor = palette.primaryInk,
+            textContentColor = palette.secondaryInk,
+            shape = RoundedCornerShape(24.dp),
+            title = {
                 Text(
-                    text = "策略与小组件设定",
-                    fontSize = 15.sp,
+                    text = stringResource(R.string.remove_dialog_title),
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = ObsidianPrimaryInk
                 )
-            }
-
-            // 低余额警戒阈值选择（支持预设与自定义）
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            },
+            text = {
+                Text(
+                    text = stringResource(R.string.remove_dialog_body),
+                    fontSize = 13.sp,
+                    lineHeight = 20.sp,
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showRemoveDialog = false
+                        viewModel.clearKey()
+                    },
                 ) {
                     Text(
-                        text = "低余额警戒阈值",
+                        text = stringResource(R.string.remove_confirm),
+                        color = palette.warning,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
-                        color = ObsidianPrimaryInk
                     )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRemoveDialog = false }) {
                     Text(
-                        text = "当前阈值：¥$currentThreshold",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AccentDeepSeek
+                        text = stringResource(R.string.remove_cancel),
+                        color = palette.secondaryInk,
+                        fontSize = 13.sp,
                     )
                 }
+            },
+        )
+    }
+}
 
-                // 快捷预设金额 Chips
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf(2.0f, 5.0f, 10.0f, 20.0f, 50.0f).forEach { value ->
-                        val selected = currentThreshold == value
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (selected) AccentDeepSeek else ObsidianSurfaceBg,
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.dp,
-                                if (selected) AccentDeepSeek else ObsidianBorder
-                            ),
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable { onThresholdSelected(value) }
-                        ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            ) {
-                                Text(
-                                    text = "¥${value.toInt()}",
-                                    fontSize = 12.sp,
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (selected) Color.White else ObsidianSecondaryInk
-                                )
-                            }
-                        }
-                    }
-                }
+@Composable
+private fun Header(
+    isConfigured: Boolean,
+    onSettingsClick: () -> Unit
+) {
+    val palette = LocalPalette.current
+    val settingsDescription = stringResource(R.string.action_settings)
 
-                // 自定义告警余额输入框
-                OutlinedTextField(
-                    value = customThresholdInput,
-                    onValueChange = onCustomThresholdChanged,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("自定义告警金额", fontSize = 12.sp, color = ObsidianSecondaryInk) },
-                    placeholder = { Text("如 2.50, 8.00, 15 等任意金额", fontSize = 13.sp, color = ObsidianMutedInk) },
-                    leadingIcon = {
-                        Text(
-                            text = "¥",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AccentDeepSeek,
-                            modifier = Modifier.padding(start = 12.dp)
-                        )
-                    },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentDeepSeek,
-                        unfocusedBorderColor = ObsidianBorder,
-                        focusedTextColor = ObsidianPrimaryInk,
-                        unfocusedTextColor = ObsidianPrimaryInk,
-                        cursorColor = AccentDeepSeek
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .padding(top = 8.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .background(
+                    (if (isConfigured) palette.accent else palette.tertiaryInk).copy(alpha = 0.16f),
+                    CircleShape
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp)
+                    .background(
+                        if (isConfigured) palette.accent else palette.tertiaryInk,
+                        CircleShape
                     ),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                // 实时对比预警状态反馈卡片
-                if (currentBalance != null) {
-                    val currentTotal = currentBalance.totalBalanceNumber
-                    val isTriggered = currentTotal < currentThreshold
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (isTriggered) Color(0x26FF5252) else Color(0x1A4D6BFE),
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp,
-                            if (isTriggered) StatusWarningDark.copy(alpha = 0.5f) else AccentDeepSeek.copy(alpha = 0.3f)
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isTriggered) StatusWarningDark else AccentDeepSeek)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isTriggered) {
-                                    "当前可用余额 ¥${currentBalance.totalBalance} 低于告警线 ¥${currentThreshold}，小组件已点亮红灯并推送通知"
-                                } else {
-                                    "当前可用余额 ¥${currentBalance.totalBalance} 高于告警线 ¥${currentThreshold}，状态正常（电光蓝）"
-                                },
-                                fontSize = 12.sp,
-                                color = if (isTriggered) StatusWarningDark else ObsidianSecondaryInk
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 静默自动同步周期
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "后台静默同步周期 (WorkManager Connected)",
-                    fontSize = 12.sp,
-                    color = ObsidianSecondaryInk
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(15L to "15m", 30L to "30m", 60L to "1h", 120L to "2h").forEach { (minutes, label) ->
-                        val selected = currentInterval == minutes
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (selected) AccentDeepSeek else ObsidianSurfaceBg,
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.dp,
-                                if (selected) AccentDeepSeek else ObsidianBorder
-                            ),
-                            modifier = Modifier.clickable { onIntervalSelected(minutes) }
-                        ) {
-                            Text(
-                                text = label,
-                                fontSize = 12.sp,
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (selected) Color.White else ObsidianSecondaryInk,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 快捷添加组件按钮
-            Button(
-                onClick = onPinWidget,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF232731))
-            ) {
-                Icon(imageVector = Icons.Default.Widgets, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("一键将小组件添加至手机桌面", fontSize = 13.sp, color = ObsidianPrimaryInk)
-            }
+            )
+        }
+        Spacer(Modifier.width(9.dp))
+        Text(
+            text = "DEEPSEEK",
+            color = palette.primaryInk,
+            fontFamily = DisplayFontFamily,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 11.sp,
+            letterSpacing = 2.2.sp,
+        )
+        Spacer(Modifier.width(10.dp))
+        Box(
+            modifier = Modifier
+                .width(1.dp)
+                .height(12.dp)
+                .background(palette.hairline),
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            text = stringResource(R.string.header_subtitle),
+            color = palette.secondaryInk,
+            fontSize = 11.sp,
+            letterSpacing = 0.4.sp,
+        )
+        Spacer(Modifier.weight(1f))
+        Box(
+            modifier = Modifier
+                .size(42.dp)
+                .clip(CircleShape)
+                .clickable(role = Role.Button, onClick = onSettingsClick)
+                .semantics {
+                    contentDescription = settingsDescription
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            SlidersGlyph(
+                tint = palette.secondaryInk,
+                background = palette.canvas,
+                size = 18.dp,
+            )
         }
     }
 }
 
 @Composable
-fun ArchitectureSecurityCard() {
+private fun PreviewMeta(
+    isConfigured: Boolean,
+    errorMessage: String?,
+    isLoading: Boolean,
+    onRetry: () -> Unit,
+) {
+    val palette = LocalPalette.current
+    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val currentTime = remember(isLoading) { timeFormat.format(Date()) }
+
+    val metaText = if (!isConfigured) {
+        stringResource(R.string.configure_to_start)
+    } else {
+        val sync = stringResource(R.string.last_sync, currentTime)
+        "$sync  ·  ${stringResource(R.string.auto_sync_note)}"
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 14.dp)) {
+        if (errorMessage != null && isConfigured) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .background(palette.warning, CircleShape),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = errorMessage,
+                    modifier = Modifier.weight(1f),
+                    color = palette.warning,
+                    fontSize = 11.sp,
+                    lineHeight = 16.sp,
+                )
+                Text(
+                    text = stringResource(R.string.action_retry),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(
+                            enabled = !isLoading,
+                            role = Role.Button,
+                            onClick = onRetry,
+                        )
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                    color = if (isLoading) palette.tertiaryInk else palette.accent,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        }
+
+        Text(
+            text = metaText,
+            color = palette.tertiaryInk,
+            fontSize = 11.sp,
+            lineHeight = 16.sp,
+        )
+    }
+}
+
+@Composable
+private fun KeySection(
+    isConfigured: Boolean,
+    maskedKey: String?,
+    keyDraft: String,
+    keyVisible: Boolean,
+    editingKey: Boolean,
+    localErrorText: String?,
+    isLoading: Boolean,
+    onKeyDraftChange: (String) -> Unit,
+    onToggleVisibility: () -> Unit,
+    onEditRequest: () -> Unit,
+    onSubmit: () -> Unit,
+    onPaste: () -> Unit,
+    focusRequester: FocusRequester,
+) {
+    val palette = LocalPalette.current
+    val shape = RoundedCornerShape(16.dp)
+    val keyFieldDescription = stringResource(R.string.key_section_title)
+    val eyeDescription = stringResource(
+        if (keyVisible) R.string.action_hide_key else R.string.action_show_key,
+    )
+
+    when {
+        isConfigured && !editingKey -> {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp)
+                    .clip(shape)
+                    .background(palette.fieldFill)
+                    .border(1.dp, palette.hairline, shape)
+                    .padding(start = 16.dp, end = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                LockGlyph(tint = palette.tertiaryInk, size = 15.dp)
+                Spacer(Modifier.width(11.dp))
+                Text(
+                    text = maskedKey ?: "••••••••",
+                    color = palette.secondaryInk,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 13.sp,
+                    letterSpacing = 0.3.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.weight(1f))
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable(role = Role.Button, onClick = onEditRequest)
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(R.string.key_change),
+                        color = palette.accent,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
+            }
+        }
+
+        else -> {
+            OutlinedTextField(
+                value = keyDraft,
+                onValueChange = onKeyDraftChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
+                    .semantics { contentDescription = keyFieldDescription },
+                enabled = !isLoading,
+                singleLine = true,
+                isError = localErrorText != null,
+                shape = shape,
+                textStyle = TextStyle(
+                    color = palette.primaryInk,
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 14.sp,
+                    letterSpacing = 0.2.sp,
+                ),
+                placeholder = {
+                    Text(
+                        text = stringResource(R.string.key_placeholder),
+                        color = palette.tertiaryInk,
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 13.sp,
+                    )
+                },
+                leadingIcon = {
+                    LockGlyph(tint = palette.tertiaryInk, size = 16.dp)
+                },
+                trailingIcon = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (keyDraft.isEmpty()) {
+                            Text(
+                                text = "粘贴",
+                                color = palette.accent,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .clickable { onPaste() }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .clickable(
+                                    role = Role.Button,
+                                    onClick = onToggleVisibility,
+                                )
+                                .semantics {
+                                    contentDescription = eyeDescription
+                                },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            EyeGlyph(
+                                visible = keyVisible,
+                                tint = palette.secondaryInk,
+                                size = 18.dp,
+                            )
+                        }
+                    }
+                },
+                visualTransformation = if (keyVisible) {
+                    VisualTransformation.None
+                } else {
+                    PasswordVisualTransformation()
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done,
+                ),
+                keyboardActions = KeyboardActions(onDone = { onSubmit() }),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = palette.fieldFill,
+                    unfocusedContainerColor = palette.fieldFill,
+                    errorContainerColor = palette.fieldFill,
+                    focusedBorderColor = palette.accent.copy(alpha = 0.75f),
+                    unfocusedBorderColor = palette.hairline,
+                    errorBorderColor = palette.warning.copy(alpha = 0.7f),
+                    cursorColor = palette.accent,
+                    focusedTextColor = palette.primaryInk,
+                    unfocusedTextColor = palette.primaryInk,
+                    disabledTextColor = palette.secondaryInk,
+                ),
+            )
+        }
+    }
+
+    Spacer(Modifier.height(9.dp))
+    if (localErrorText != null) {
+        Text(
+            text = localErrorText,
+            color = palette.warning,
+            fontSize = 11.sp,
+        )
+    } else {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            LockGlyph(tint = palette.tertiaryInk, size = 11.dp)
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = stringResource(R.string.key_hint),
+                color = palette.tertiaryInk,
+                fontSize = 11.sp,
+                lineHeight = 15.sp,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PrimaryActionButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false,
+    leadingIcon: (@Composable () -> Unit)? = null,
+) {
+    val palette = LocalPalette.current
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(50.dp),
+        enabled = enabled,
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = palette.accent,
+            contentColor = palette.onAccent,
+            disabledContainerColor = palette.accent.copy(alpha = 0.40f),
+            disabledContentColor = palette.onAccent.copy(alpha = 0.7f),
+        ),
+        contentPadding = PaddingValues(horizontal = 10.dp),
+    ) {
+        if (loading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(14.dp),
+                color = palette.onAccent,
+                strokeWidth = 1.6.dp,
+            )
+            Spacer(Modifier.width(8.dp))
+        } else if (leadingIcon != null) {
+            leadingIcon()
+            Spacer(Modifier.width(8.dp))
+        }
+        Text(
+            text = text,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun SecondaryActionButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val palette = LocalPalette.current
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(50.dp),
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, palette.hairline),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = palette.secondaryInk,
+        ),
+        contentPadding = PaddingValues(horizontal = 10.dp),
+    ) {
+        PlusGlyph(tint = palette.secondaryInk, size = 14.dp)
+        Spacer(Modifier.width(7.dp))
+        Text(
+            text = text,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun StrategyOverviewCard(
+    threshold: Float,
+    intervalMinutes: Long,
+    balanceData: com.example.deepseekwidget.data.BalanceData?,
+    onOpenSettings: () -> Unit
+) {
+    val palette = LocalPalette.current
+    val shape = RoundedCornerShape(18.dp)
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = ObsidianCardBg,
-        border = androidx.compose.foundation.BorderStroke(1.dp, ObsidianBorder)
+        shape = shape,
+        color = palette.fieldFill,
+        border = androidx.compose.foundation.BorderStroke(1.dp, palette.hairline)
     ) {
-        Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Security,
-                    contentDescription = null,
-                    tint = StatusSuccess,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "零明文凭据安全与边界保障",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = ObsidianPrimaryInk
+                    text = "监控与策略概览",
+                    color = palette.primaryInk,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.weight(1f))
+                Text(
+                    text = "调整",
+                    color = palette.accent,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable { onOpenSettings() }
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
 
-            Text(
-                text = "• Zero-Plaintext Policy: API Key 经由 Android KeyStore 硬件根 AES256-GCM 全程加密，绝不进入明文 DataStore。\n" +
-                        "• IPC Binder Limit: 仅对排版字符区域离屏光栅化，严格将 Bitmap 控制在 200KB 以内，杜绝 1.5MB Binder 溢出崩溃。\n" +
-                        "• Refresh Debounce: 客户端 3 秒硬件级事件防抖，彻底消除并发竞争与频繁调用。",
-                fontSize = 12.sp,
-                color = ObsidianSecondaryInk,
-                lineHeight = 18.sp
-            )
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(text = "告警警戒线", color = palette.tertiaryInk, fontSize = 11.sp)
+                    Text(
+                        text = "¥${threshold}",
+                        color = palette.primaryInk,
+                        fontFamily = DisplayFontFamily,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(text = "自动同步周期", color = palette.tertiaryInk, fontSize = 11.sp)
+                    Text(
+                        text = "${intervalMinutes} 分钟",
+                        color = palette.primaryInk,
+                        fontFamily = DisplayFontFamily,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            if (balanceData != null) {
+                Spacer(Modifier.height(12.dp))
+                val isTriggered = balanceData.totalBalanceNumber < threshold.toDouble()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            if (isTriggered) palette.warning.copy(alpha = 0.12f)
+                            else palette.accent.copy(alpha = 0.10f)
+                        )
+                        .border(
+                            1.dp,
+                            if (isTriggered) palette.warning.copy(alpha = 0.4f)
+                            else palette.accent.copy(alpha = 0.25f),
+                            RoundedCornerShape(10.dp)
+                        )
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .background(if (isTriggered) palette.warning else palette.accent, CircleShape)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (isTriggered) {
+                                "当前可用余额 ¥${balanceData.totalBalance} 低于告警线，状态预警（红灯）"
+                            } else {
+                                "当前可用余额 ¥${balanceData.totalBalance} 高于告警线，状态正常（电光蓝）"
+                            },
+                            color = if (isTriggered) palette.warning else palette.secondaryInk,
+                            fontSize = 11.sp
+                        )
+                    }
+                }
+            }
         }
     }
 }

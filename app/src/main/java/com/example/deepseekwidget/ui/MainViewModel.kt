@@ -17,11 +17,13 @@ import com.example.deepseekwidget.work.BalanceSyncWorker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.example.deepseekwidget.data.ThemeMode
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class MainUiState(
     val apiKey: String = "",
+    val maskedKey: String? = null,
     val isKeyVisible: Boolean = false,
     val isConfigured: Boolean = false,
     val isLoading: Boolean = false,
@@ -32,7 +34,8 @@ data class MainUiState(
     val customThresholdInput: String = "5",
     val syncIntervalMinutes: Long = 60L,
     val previewDarkMode: Boolean = true,
-    val previewIs2x2: Boolean = true
+    val previewIs2x2: Boolean = true,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -49,24 +52,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun loadSettings() {
         val context = getApplication<Application>()
         val key = SecureKeyStore.getApiKey(context) ?: ""
+        val masked = SecureKeyStore.getMaskedApiKey(context)
         val threshold = SecureKeyStore.getLowBalanceThreshold(context)
         val interval = SecureKeyStore.getSyncIntervalMinutes(context)
+        val themeMode = SecureKeyStore.getThemeMode(context)
         val isConfigured = key.isNotBlank()
         val formattedThreshold = if (threshold % 1f == 0f) threshold.toInt().toString() else threshold.toString()
 
         _uiState.update {
             it.copy(
                 apiKey = key,
+                maskedKey = masked,
                 isConfigured = isConfigured,
                 lowBalanceThreshold = threshold,
                 customThresholdInput = formattedThreshold,
-                syncIntervalMinutes = interval
+                syncIntervalMinutes = interval,
+                themeMode = themeMode
             )
         }
 
         if (isConfigured) {
             testAndFetchBalance()
         }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        val context = getApplication<Application>()
+        SecureKeyStore.setThemeMode(context, mode)
+        _uiState.update { it.copy(themeMode = mode) }
     }
 
     fun onApiKeyChanged(newKey: String) {
@@ -160,7 +173,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         SecureKeyStore.saveApiKey(context, key)
-        _uiState.update { it.copy(isLoading = true, isConfigured = true, errorMessage = null) }
+        val masked = SecureKeyStore.getMaskedApiKey(context)
+        _uiState.update { it.copy(isLoading = true, isConfigured = true, maskedKey = masked, errorMessage = null) }
 
         viewModelScope.launch {
             val syncResult = syncRepository.syncAllWidgets()
@@ -189,6 +203,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update {
             it.copy(
                 apiKey = "",
+                maskedKey = null,
                 isConfigured = false,
                 balanceData = null,
                 successMessage = "已彻底清空本地加密凭证"

@@ -1,8 +1,68 @@
 <resources>
-    <string name="app_name">DeepSeek Widget</string>
+    <string name="app_name">DeepSeek 余额</string>
     <string name="widget_name">DeepSeek 余额</string>
     <string name="widget_description">极简高对比度 DeepSeek API 余额监控小组件</string>
     <string name="deepseek_brand">DEEPSEEK</string>
     <string name="syncing">Syncing...</string>
     <string name="refresh">刷新</string>
+
+    <string name="header_subtitle">余额监控</string>
+    <string name="preview_label">小组件预览</string>
+    <string name="preview_size">3 × 1</string>
+    <string name="sample_tag">PREVIEW</string>
+
+    <string name="key_section_title">API 密钥</string>
+    <string name="key_placeholder">sk-••••••••••••••••</string>
+    <string name="key_hint">仅保存在本机的 Android Keystore (AES256-GCM) 中</string>
+    <string name="key_configured">已配置</string>
+    <string name="key_not_configured">未配置</string>
+    <string name="key_change">更换</string>
+    <string name="key_cancel">取消</string>
+    <string name="key_save">保存新密钥</string>
+    <string name="key_save_sync">保存并同步</string>
+    <string name="key_saving">保存中…</string>
+    <string name="key_remove">移除 API 密钥</string>
+
+    <string name="action_sync">立即同步</string>
+    <string name="action_add_widget">添加到桌面</string>
+    <string name="action_settings">设置</string>
+    <string name="action_refresh">刷新余额</string>
+    <string name="action_show_key">显示密钥</string>
+    <string name="action_hide_key">隐藏密钥</string>
+
+    <string name="state_unconfigured">未配置密钥</string>
+    <string name="state_syncing">正在同步</string>
+
+    <string name="last_sync_never">尚未同步</string>
+    <string name="last_sync">上次同步 %1$s</string>
+    <string name="auto_sync_note">后台自动同步已启用</string>
+    <string name="configure_to_start">配置密钥后开始同步</string>
+    <string name="action_retry">重试</string>
+
+    <string name="settings_title">设置</string>
+    <string name="theme_title">外观</string>
+    <string name="theme_system">跟随系统</string>
+    <string name="theme_light">日间</string>
+    <string name="theme_dark">暗夜</string>
+    <string name="strategy_title">监控与策略</string>
+    <string name="threshold_title">低余额警戒线</string>
+    <string name="interval_title">后台同步周期</string>
+    <string name="about_title">关于与安全</string>
+    <string name="privacy_note">Zero-Plaintext Policy：密钥经 KeyStore 硬件根 AES-256-GCM 加密，仅存本机；本地直连 DeepSeek 官方 API，不设中间服务器。</string>
+    <string name="version_label">版本 %1$s</string>
+
+    <string name="remove_dialog_title">移除 API 密钥？</string>
+    <string name="remove_dialog_body">密钥将从本机安全擦除，桌面小组件会回到未配置状态，余额缓存也将被彻底清除。</string>
+    <string name="remove_confirm">确认移除</string>
+    <string name="remove_cancel">取消</string>
+
+    <string name="toast_widget_pin_unavailable">当前桌面不支持一键添加，请长按桌面手动添加</string>
+    <string name="toast_widget_pin_prompt">已请求将小组件添加至桌面</string>
+    <string name="toast_key_saved">密钥已加密保存并同步</string>
+    <string name="toast_key_removed">密钥与余额缓存已安全移除</string>
+    <string name="error_key_save_failed">保存密钥失败，请重试</string>
+    <string name="error_key_empty">请输入有效的 API 密钥</string>
+    <string name="error_key_short">密钥长度过短 (少于 12 位)</string>
+    <string name="error_key_remove_failed">移除密钥失败，请重试</string>
+    <string name="loading_secure_storage">正在读取安全存储…</string>
 </resources>
