@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.2] - 2026-10-26
+
+### 修复与优化
+- **彻底修复设置页面上滑“无限上下跳动”抖动 Bug**：
+  - 针对 Material 3 `ModalBottomSheet` 内部滚动与外部拖拽拦截机制冲突，引入 `NestedScrollConnection` 吸收上滑过冲速度与边界滚动，并在 Sheet 完全展开前限制内部滚动，消除死循环弹簧震荡。
+- **关于与安全区域新增开源作者信息**：
+  - 在设置抽屉底部新增开发者名称（`FloppyPuff`）与 GitHub 开源仓库快捷卡片，支持一键调起浏览器访问项目主页。
+- **文档重构**：
+  - 精简 `README.md`，聚焦小组件全尺寸自适应、多币种识别、自定义低余额告警、后台静默同步等核心功能介绍。
+
 ## [v1.3.1] - 2026-10-26
 
 ### 新增特性
