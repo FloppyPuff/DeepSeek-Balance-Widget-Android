@@ -47,8 +47,11 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import com.example.deepseekwidget.BuildConfig
+import com.example.deepseekwidget.data.DownloadProgress
 import com.example.deepseekwidget.data.UpdateCheckState
+import com.example.deepseekwidget.data.UpdateDownloader
 import com.example.deepseekwidget.data.UpdateInfo
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
@@ -105,6 +108,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.deepseekwidget.R
+import com.example.deepseekwidget.ui.components.DeepSeekPlatformSheet
 import com.example.deepseekwidget.ui.components.EyeGlyph
 import com.example.deepseekwidget.ui.components.LockGlyph
 import com.example.deepseekwidget.ui.components.PlusGlyph
@@ -155,6 +159,7 @@ fun MainScreen(viewModel: MainViewModel) {
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var showRemoveDialog by rememberSaveable { mutableStateOf(false) }
     var showUpdateDialog by rememberSaveable { mutableStateOf(false) }
+    var showPlatformSheet by rememberSaveable { mutableStateOf(false) }
     var editingKey by rememberSaveable { mutableStateOf(false) }
     var keyVisible by rememberSaveable { mutableStateOf(false) }
     var keyDraft by remember { mutableStateOf("") }
@@ -353,6 +358,8 @@ fun MainScreen(viewModel: MainViewModel) {
                         is2x2 = uiState.previewIs2x2,
                         lowBalanceThreshold = uiState.lowBalanceThreshold,
                         onRefresh = { viewModel.syncAllWidgets() },
+                        isMasked = uiState.isPrivacyModeEnabled,
+                        onToggleMask = { viewModel.setPrivacyModeEnabled(!uiState.isPrivacyModeEnabled) }
                     )
 
                     // 预览底部元数据与重试
@@ -504,17 +511,10 @@ fun MainScreen(viewModel: MainViewModel) {
                         }
                     }
 
-                    // DeepSeek 开放平台极简跳转
+                    // DeepSeek 开放平台常用快捷入口
                     Spacer(Modifier.height(8.dp))
                     DeepSeekPlatformLinkButton(
-                        onClick = {
-                            runCatching {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(DEEPSEEK_USAGE_URL))
-                                context.startActivity(intent)
-                            }.onFailure {
-                                Toast.makeText(context, "无法打开浏览器", Toast.LENGTH_SHORT).show()
-                            }
-                        }
+                        onClick = { showPlatformSheet = true }
                     )
 
 
@@ -562,8 +562,19 @@ fun MainScreen(viewModel: MainViewModel) {
             updateState = updateState,
             autoCheckUpdate = uiState.autoCheckUpdateEnabled,
             onAutoCheckUpdateChange = { viewModel.setAutoCheckUpdateEnabled(it) },
+            isPrivacyModeEnabled = uiState.isPrivacyModeEnabled,
+            onPrivacyModeChange = { viewModel.setPrivacyModeEnabled(it) },
+            isLowBalanceNotificationEnabled = uiState.isLowBalanceNotificationEnabled,
+            onLowBalanceNotificationChange = { viewModel.setLowBalanceNotificationEnabled(it) },
             onCheckUpdate = { viewModel.checkForUpdates(BuildConfig.VERSION_NAME) },
             onShowUpdateDialog = { showUpdateDialog = true },
+        )
+    }
+
+    // DeepSeek 开放平台快捷入口抽屉
+    if (showPlatformSheet) {
+        DeepSeekPlatformSheet(
+            onDismiss = { showPlatformSheet = false }
         )
     }
 
@@ -1086,12 +1097,20 @@ private fun UpdateDialog(
 ) {
     val palette = LocalPalette.current
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var downloadProgress by remember { mutableStateOf<DownloadProgress>(DownloadProgress.Idle) }
+
     val formattedNotes = remember(updateInfo.releaseNotes, palette.primaryInk) {
         formatMarkdownReleaseNotes(updateInfo.releaseNotes, palette.primaryInk)
     }
 
+    val isDownloading = downloadProgress is DownloadProgress.Downloading
+    val isCompleted = downloadProgress is DownloadProgress.Completed
+
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            if (!isDownloading) onDismiss()
+        },
         containerColor = palette.surface,
         titleContentColor = palette.primaryInk,
         textContentColor = palette.secondaryInk,
@@ -1124,7 +1143,7 @@ private fun UpdateDialog(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 280.dp)
+                            .heightIn(max = 240.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(palette.fieldFill)
                             .border(1.dp, palette.hairline, RoundedCornerShape(10.dp))
@@ -1140,22 +1159,92 @@ private fun UpdateDialog(
                     }
                 } else {
                     Text(
-                        text = "DeepSeek Balance 有新版本可用，建议前往下载体验最新功能与修复。",
+                        text = "DeepSeek Balance 有新版本可用，建议下载更新体验最新功能与修复。",
                         fontSize = 13.sp,
                         lineHeight = 19.sp,
                     )
+                }
+
+                // 下载进度条与状态展示
+                when (val progress = downloadProgress) {
+                    is DownloadProgress.Downloading -> {
+                        val percent = (progress.progress * 100).toInt()
+                        val downloadedMb = String.format(Locale.getDefault(), "%.1f", progress.downloadedBytes / (1024f * 1024f))
+                        val totalMb = if (progress.totalBytes > 0) {
+                            String.format(Locale.getDefault(), "%.1f MB", progress.totalBytes / (1024f * 1024f))
+                        } else {
+                            "计算中..."
+                        }
+                        Spacer(Modifier.height(12.dp))
+                        LinearProgressIndicator(
+                            progress = { progress.progress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = palette.accent,
+                            trackColor = palette.fieldFill
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "正在下载 $percent%",
+                                color = palette.accent,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "$downloadedMb MB / $totalMb",
+                                color = palette.tertiaryInk,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                    is DownloadProgress.Completed -> {
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            text = "✓ 新版安装包已就绪，点击下方按钮立即安装",
+                            color = palette.accent,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    is DownloadProgress.Failed -> {
+                        Spacer(Modifier.height(10.dp))
+                        Text(
+                            text = "下载中断：${progress.errorMessage}，可重试或改走浏览器下载",
+                            color = palette.warning,
+                            fontSize = 11.sp,
+                            lineHeight = 16.sp
+                        )
+                    }
+                    DownloadProgress.Idle -> {}
                 }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onDismiss()
-                    runCatching {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.downloadUrl))
-                        context.startActivity(intent)
+                    when (val current = downloadProgress) {
+                        is DownloadProgress.Completed -> {
+                            UpdateDownloader.installApk(context, current.apkFile)
+                        }
+                        else -> {
+                            scope.launch {
+                                UpdateDownloader.downloadApk(
+                                    context = context,
+                                    downloadUrl = updateInfo.downloadUrl,
+                                    version = updateInfo.latestVersion,
+                                    onProgress = { downloadProgress = it }
+                                )
+                            }
+                        }
                     }
                 },
+                enabled = !isDownloading,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = palette.accent,
                     contentColor = palette.onAccent,
@@ -1163,19 +1252,43 @@ private fun UpdateDialog(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
-                    text = "前往下载",
+                    text = when (downloadProgress) {
+                        is DownloadProgress.Completed -> "立即安装"
+                        is DownloadProgress.Downloading -> "下载中…"
+                        is DownloadProgress.Failed -> "重试下载"
+                        DownloadProgress.Idle -> "应用内下载更新"
+                    },
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                 )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(
-                    text = "稍后再说",
-                    color = palette.secondaryInk,
-                    fontSize = 13.sp,
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                TextButton(
+                    onClick = {
+                        runCatching {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateInfo.downloadUrl))
+                            context.startActivity(intent)
+                        }
+                    }
+                ) {
+                    Text(
+                        text = "浏览器下载 ↗",
+                        color = palette.secondaryInk,
+                        fontSize = 12.sp,
+                    )
+                }
+                TextButton(
+                    onClick = onDismiss,
+                    enabled = !isDownloading
+                ) {
+                    Text(
+                        text = "稍后再说",
+                        color = palette.tertiaryInk,
+                        fontSize = 12.sp,
+                    )
+                }
             }
         },
     )

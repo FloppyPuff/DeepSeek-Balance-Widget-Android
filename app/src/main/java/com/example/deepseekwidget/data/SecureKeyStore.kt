@@ -19,9 +19,35 @@ object SecureKeyStore {
     private const val KEY_NOTIFY_LOW_BALANCE = "notify_low_balance"
     private const val KEY_THEME_MODE = "theme_mode"
     private const val KEY_AUTO_CHECK_UPDATE = "auto_check_update"
+    private const val KEY_PRIVACY_MODE = "privacy_mode"
+    private const val KEY_LAST_NOTIFIED_LOW_BALANCE_TIME = "last_notified_low_balance_time"
+    private const val KEY_LAST_NOTIFIED_LOW_BALANCE_AMOUNT = "last_notified_low_balance_amount"
 
     @Volatile
     private var cachedPrefs: SharedPreferences? = null
+
+    @Volatile
+    private var cachedApiKey: String? = null
+    @Volatile
+    private var cachedApiKeyLoaded = false
+
+    @Volatile
+    private var cachedThreshold: Float? = null
+
+    @Volatile
+    private var cachedSyncInterval: Long? = null
+
+    @Volatile
+    private var cachedNotifyLowBalance: Boolean? = null
+
+    @Volatile
+    private var cachedThemeMode: ThemeMode? = null
+
+    @Volatile
+    private var cachedAutoCheckUpdate: Boolean? = null
+
+    @Volatile
+    private var cachedPrivacyMode: Boolean? = null
 
     private fun getEncryptedPrefs(context: Context): SharedPreferences {
         return cachedPrefs ?: synchronized(this) {
@@ -62,20 +88,29 @@ object SecureKeyStore {
     }
 
     fun saveApiKey(context: Context, apiKey: String) {
+        val trimmed = apiKey.trim()
+        cachedApiKey = trimmed
+        cachedApiKeyLoaded = true
         runCatching {
             getEncryptedPrefs(context).edit()
-                .putString(KEY_API_KEY, apiKey.trim())
+                .putString(KEY_API_KEY, trimmed)
                 .apply()
         }
     }
 
     fun getApiKey(context: Context): String? {
+        if (cachedApiKeyLoaded) return cachedApiKey
         return runCatching {
             getEncryptedPrefs(context).getString(KEY_API_KEY, null)?.takeIf { it.isNotBlank() }
-        }.getOrNull()
+        }.getOrNull().also {
+            cachedApiKey = it
+            cachedApiKeyLoaded = true
+        }
     }
 
     fun clearApiKey(context: Context) {
+        cachedApiKey = null
+        cachedApiKeyLoaded = true
         runCatching {
             getEncryptedPrefs(context).edit()
                 .remove(KEY_API_KEY)
@@ -88,12 +123,14 @@ object SecureKeyStore {
     }
 
     fun getLowBalanceThreshold(context: Context): Float {
+        cachedThreshold?.let { return it }
         return runCatching {
             getEncryptedPrefs(context).getFloat(KEY_LOW_BALANCE_THRESHOLD, 5.0f)
-        }.getOrDefault(5.0f)
+        }.getOrDefault(5.0f).also { cachedThreshold = it }
     }
 
     fun setLowBalanceThreshold(context: Context, threshold: Float) {
+        cachedThreshold = threshold
         runCatching {
             getEncryptedPrefs(context).edit()
                 .putFloat(KEY_LOW_BALANCE_THRESHOLD, threshold)
@@ -102,12 +139,14 @@ object SecureKeyStore {
     }
 
     fun getSyncIntervalMinutes(context: Context): Long {
+        cachedSyncInterval?.let { return it }
         return runCatching {
             getEncryptedPrefs(context).getLong(KEY_SYNC_INTERVAL_MINUTES, 60L)
-        }.getOrDefault(60L)
+        }.getOrDefault(60L).also { cachedSyncInterval = it }
     }
 
     fun setSyncIntervalMinutes(context: Context, minutes: Long) {
+        cachedSyncInterval = minutes
         runCatching {
             getEncryptedPrefs(context).edit()
                 .putLong(KEY_SYNC_INTERVAL_MINUTES, minutes)
@@ -116,12 +155,14 @@ object SecureKeyStore {
     }
 
     fun isLowBalanceNotificationEnabled(context: Context): Boolean {
+        cachedNotifyLowBalance?.let { return it }
         return runCatching {
             getEncryptedPrefs(context).getBoolean(KEY_NOTIFY_LOW_BALANCE, true)
-        }.getOrDefault(true)
+        }.getOrDefault(true).also { cachedNotifyLowBalance = it }
     }
 
     fun setLowBalanceNotificationEnabled(context: Context, enabled: Boolean) {
+        cachedNotifyLowBalance = enabled
         runCatching {
             getEncryptedPrefs(context).edit()
                 .putBoolean(KEY_NOTIFY_LOW_BALANCE, enabled)
@@ -130,13 +171,15 @@ object SecureKeyStore {
     }
 
     fun getThemeMode(context: Context): ThemeMode {
+        cachedThemeMode?.let { return it }
         return runCatching {
             val name = getEncryptedPrefs(context).getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name)
             ThemeMode.valueOf(name ?: ThemeMode.SYSTEM.name)
-        }.getOrDefault(ThemeMode.SYSTEM)
+        }.getOrDefault(ThemeMode.SYSTEM).also { cachedThemeMode = it }
     }
 
     fun setThemeMode(context: Context, mode: ThemeMode) {
+        cachedThemeMode = mode
         runCatching {
             getEncryptedPrefs(context).edit()
                 .putString(KEY_THEME_MODE, mode.name)
@@ -145,15 +188,63 @@ object SecureKeyStore {
     }
 
     fun isAutoCheckUpdateEnabled(context: Context): Boolean {
+        cachedAutoCheckUpdate?.let { return it }
         return runCatching {
             getEncryptedPrefs(context).getBoolean(KEY_AUTO_CHECK_UPDATE, true)
-        }.getOrDefault(true)
+        }.getOrDefault(true).also { cachedAutoCheckUpdate = it }
     }
 
     fun setAutoCheckUpdateEnabled(context: Context, enabled: Boolean) {
+        cachedAutoCheckUpdate = enabled
         runCatching {
             getEncryptedPrefs(context).edit()
                 .putBoolean(KEY_AUTO_CHECK_UPDATE, enabled)
+                .apply()
+        }
+    }
+
+    fun isPrivacyModeEnabled(context: Context): Boolean {
+        cachedPrivacyMode?.let { return it }
+        return runCatching {
+            getEncryptedPrefs(context).getBoolean(KEY_PRIVACY_MODE, false)
+        }.getOrDefault(false).also { cachedPrivacyMode = it }
+    }
+
+    fun setPrivacyModeEnabled(context: Context, enabled: Boolean) {
+        cachedPrivacyMode = enabled
+        runCatching {
+            getEncryptedPrefs(context).edit()
+                .putBoolean(KEY_PRIVACY_MODE, enabled)
+                .apply()
+        }
+    }
+
+    fun getLastNotifiedLowBalanceTime(context: Context): Long {
+        return runCatching {
+            getEncryptedPrefs(context).getLong(KEY_LAST_NOTIFIED_LOW_BALANCE_TIME, 0L)
+        }.getOrDefault(0L)
+    }
+
+    fun getLastNotifiedLowBalanceAmount(context: Context): String? {
+        return runCatching {
+            getEncryptedPrefs(context).getString(KEY_LAST_NOTIFIED_LOW_BALANCE_AMOUNT, null)
+        }.getOrNull()
+    }
+
+    fun recordLowBalanceNotified(context: Context, amount: String) {
+        runCatching {
+            getEncryptedPrefs(context).edit()
+                .putLong(KEY_LAST_NOTIFIED_LOW_BALANCE_TIME, System.currentTimeMillis())
+                .putString(KEY_LAST_NOTIFIED_LOW_BALANCE_AMOUNT, amount)
+                .apply()
+        }
+    }
+
+    fun clearLowBalanceNotified(context: Context) {
+        runCatching {
+            getEncryptedPrefs(context).edit()
+                .remove(KEY_LAST_NOTIFIED_LOW_BALANCE_TIME)
+                .remove(KEY_LAST_NOTIFIED_LOW_BALANCE_AMOUNT)
                 .apply()
         }
     }

@@ -101,9 +101,7 @@ class WidgetSyncRepository(private val context: Context) {
                     val isLow = data.isLowBalance(threshold)
                     prefs[WidgetPrefsKeys.IS_LOW_BALANCE] = isLow
 
-                    if (isLow && SecureKeyStore.isLowBalanceNotificationEnabled(context)) {
-                        sendLowBalanceNotification(data.currencySymbol, data.totalBalance)
-                    }
+                    checkAndNotifyLowBalance(data, threshold)
                 }.onFailure { error ->
                     prefs[WidgetPrefsKeys.HAS_ERROR] = true
                     prefs[WidgetPrefsKeys.ERROR_MSG] = error.localizedMessage ?: "Sync Failed"
@@ -143,9 +141,7 @@ class WidgetSyncRepository(private val context: Context) {
 
         result.onSuccess { data ->
             BalanceCache.save(context, data, timeStr)
-            if (data.isLowBalance(threshold) && SecureKeyStore.isLowBalanceNotificationEnabled(context)) {
-                sendLowBalanceNotification(data.currencySymbol, data.totalBalance)
-            }
+            checkAndNotifyLowBalance(data, threshold)
         }.onFailure { err ->
             BalanceCache.markError(context, err.localizedMessage ?: "Sync Failed")
         }
@@ -175,6 +171,25 @@ class WidgetSyncRepository(private val context: Context) {
         }
 
         return result
+    }
+
+    private fun checkAndNotifyLowBalance(data: BalanceData, threshold: Double) {
+        val isLow = data.isLowBalance(threshold)
+        if (isLow) {
+            if (SecureKeyStore.isLowBalanceNotificationEnabled(context)) {
+                val lastNotifiedTime = SecureKeyStore.getLastNotifiedLowBalanceTime(context)
+                val now = System.currentTimeMillis()
+                val oneDayMs = 24 * 60 * 60 * 1000L
+                val shouldNotify = (lastNotifiedTime == 0L) || (now - lastNotifiedTime > oneDayMs)
+                if (shouldNotify) {
+                    sendLowBalanceNotification(data.currencySymbol, data.totalBalance)
+                    SecureKeyStore.recordLowBalanceNotified(context, data.totalBalance)
+                }
+            }
+        } else {
+            // 余额正常或回升（例如充值后），重置通知记录，下次再次跌破时能及时响应
+            SecureKeyStore.clearLowBalanceNotified(context)
+        }
     }
 
     private fun sendLowBalanceNotification(symbol: String, balance: String) {

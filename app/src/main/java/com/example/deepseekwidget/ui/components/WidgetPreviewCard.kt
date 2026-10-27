@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,6 +61,8 @@ fun WidgetPreviewCard(
     is2x2: Boolean,
     lowBalanceThreshold: Float,
     onRefresh: () -> Unit,
+    isMasked: Boolean = false,
+    onToggleMask: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val palette = LocalPalette.current
@@ -88,6 +91,10 @@ fun WidgetPreviewCard(
         else -> null
     }
     val symbol = balanceData?.currencySymbol ?: "¥"
+
+    val displayTotal = if (isMasked) "••••" else total
+    val displayGranted = if (isMasked) (if (granted != null) "••••" else null) else granted
+    val displayToppedUp = if (isMasked) (if (toppedUp != null) "••••" else null) else toppedUp
 
     val totalNum = balanceData?.totalBalanceNumber ?: 0.0
     val isLowBalance = hasData && (totalNum < lowBalanceThreshold.toDouble())
@@ -150,20 +157,21 @@ fun WidgetPreviewCard(
         }
 
         val bitmap = remember(
-            total,
+            displayTotal,
             symbol,
             palette.isDark,
             primaryColorInt,
             secondaryColorInt,
-            is2x2
+            is2x2,
+            isMasked
         ) {
             BalanceTypographyRenderer.renderBalanceBitmap(
                 context = context,
                 currencySymbol = symbol,
-                balanceStr = total ?: "--.--",
+                balanceStr = displayTotal ?: "--.--",
                 primaryColor = primaryColorInt,
                 secondaryColor = secondaryColorInt,
-                baseSizeSp = if (is2x2) 44f else 30f,
+                baseSizeSp = if (is2x2) 32f else 30f,
             )
         }
         val heroWidth = with(density) { (bitmap.width / density.density).dp }
@@ -189,6 +197,22 @@ fun WidgetPreviewCard(
                     fontSize = 10.sp,
                     letterSpacing = 1.8.sp,
                 )
+                if (!is2x2 && onToggleMask != null) {
+                    Spacer(Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onToggleMask
+                        )
+                    ) {
+                        EyeGlyph(
+                            visible = !isMasked,
+                            tint = palette.secondaryInk,
+                            size = 12.dp
+                        )
+                    }
+                }
                 if (statusLabel != null) {
                     Spacer(Modifier.size(8.dp))
                     Text(
@@ -252,8 +276,8 @@ fun WidgetPreviewCard(
             // 核心余额艺术位图
             Image(
                 bitmap = bitmap.asImageBitmap(),
-                contentDescription = if (total != null) {
-                    "余额 ${symbol}${total}${if (isSample) "，示例预览" else ""}"
+                contentDescription = if (displayTotal != null) {
+                    "余额 ${symbol}${displayTotal}${if (isSample) "，示例预览" else ""}"
                 } else {
                     "余额尚未同步"
                 },
@@ -262,6 +286,27 @@ fun WidgetPreviewCard(
             )
 
             if (is2x2) {
+                // 模仿参考图：在余额下方展示「可用余额 👁」脱敏开关
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .then(if (onToggleMask != null) Modifier.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onToggleMask) else Modifier)
+                ) {
+                    Text(
+                        text = "可用余额",
+                        color = palette.secondaryInk,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Normal
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    EyeGlyph(
+                        visible = !isMasked,
+                        tint = palette.secondaryInk,
+                        size = 12.dp
+                    )
+                }
+
                 Spacer(Modifier.weight(1f))
 
                 // 2×2 底栏区域
@@ -282,13 +327,13 @@ fun WidgetPreviewCard(
                 ) {
                     DetailLabel(
                         label = "GRANTED",
-                        value = if (granted != null) "$symbol$granted" else "—",
-                        muted = granted == null,
+                        value = if (displayGranted != null) "$symbol$displayGranted" else "—",
+                        muted = displayGranted == null,
                     )
                     DetailLabel(
                         label = "TOP-UP",
-                        value = if (toppedUp != null) "$symbol$toppedUp" else "—",
-                        muted = toppedUp == null,
+                        value = if (displayToppedUp != null) "$symbol$displayToppedUp" else "—",
+                        muted = displayToppedUp == null,
                         alignEnd = true,
                     )
                 }
@@ -334,7 +379,12 @@ private fun RefreshCircle(
         modifier = Modifier
             .size(36.dp)
             .clip(CircleShape)
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable(
+                enabled = enabled,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
             .semantics { contentDescription = refreshDescription },
         contentAlignment = Alignment.Center,
     ) {

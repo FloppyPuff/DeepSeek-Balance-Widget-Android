@@ -37,7 +37,9 @@ data class MainUiState(
     val syncIntervalMinutes: Long = 60L,
     val previewIs2x2: Boolean = true,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val autoCheckUpdateEnabled: Boolean = true
+    val autoCheckUpdateEnabled: Boolean = true,
+    val isPrivacyModeEnabled: Boolean = false,
+    val isLowBalanceNotificationEnabled: Boolean = true
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -62,6 +64,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val interval = SecureKeyStore.getSyncIntervalMinutes(context)
         val themeMode = SecureKeyStore.getThemeMode(context)
         val autoCheckUpdate = SecureKeyStore.isAutoCheckUpdateEnabled(context)
+        val privacyMode = SecureKeyStore.isPrivacyModeEnabled(context)
+        val lowBalanceNotification = SecureKeyStore.isLowBalanceNotificationEnabled(context)
         val isConfigured = key.isNotBlank()
         val formattedThreshold = if (threshold % 1f == 0f) threshold.toInt().toString() else threshold.toString()
 
@@ -76,7 +80,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 customThresholdInput = formattedThreshold,
                 syncIntervalMinutes = interval,
                 themeMode = themeMode,
-                autoCheckUpdateEnabled = autoCheckUpdate
+                autoCheckUpdateEnabled = autoCheckUpdate,
+                isPrivacyModeEnabled = privacyMode,
+                isLowBalanceNotificationEnabled = lowBalanceNotification
             )
         }
 
@@ -220,6 +226,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val context = getApplication<Application>()
         SecureKeyStore.setAutoCheckUpdateEnabled(context, enabled)
         _uiState.update { it.copy(autoCheckUpdateEnabled = enabled) }
+    }
+
+    fun setPrivacyModeEnabled(enabled: Boolean) {
+        val context = getApplication<Application>()
+        SecureKeyStore.setPrivacyModeEnabled(context, enabled)
+        _uiState.update { it.copy(isPrivacyModeEnabled = enabled) }
+        viewModelScope.launch {
+            syncRepository.syncAllWidgets()
+        }
+    }
+
+    fun setLowBalanceNotificationEnabled(enabled: Boolean) {
+        val context = getApplication<Application>()
+        SecureKeyStore.setLowBalanceNotificationEnabled(context, enabled)
+        _uiState.update { it.copy(isLowBalanceNotificationEnabled = enabled) }
     }
 
     fun checkForUpdates(currentVersion: String, isAuto: Boolean = false) {

@@ -19,4 +19,5 @@ object WidgetPrefsKeys {
     val ERROR_MSG = stringPreferencesKey("error_msg")
     val IS_LOW_BALANCE = booleanPreferencesKey("is_low_balance")
     val LAST_REFRESH_TIMESTAMP = longPreferencesKey("last_refresh_timestamp")
+    val IS_MASKED = booleanPreferencesKey("is_masked")
 }

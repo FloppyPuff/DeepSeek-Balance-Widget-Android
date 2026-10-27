@@ -86,6 +86,10 @@ fun SettingsSheet(
     updateState: UpdateCheckState = UpdateCheckState.Idle,
     autoCheckUpdate: Boolean = true,
     onAutoCheckUpdateChange: (Boolean) -> Unit = {},
+    isPrivacyModeEnabled: Boolean = false,
+    onPrivacyModeChange: (Boolean) -> Unit = {},
+    isLowBalanceNotificationEnabled: Boolean = true,
+    onLowBalanceNotificationChange: (Boolean) -> Unit = {},
     onCheckUpdate: () -> Unit = {},
     onShowUpdateDialog: () -> Unit = {},
 ) {
@@ -303,6 +307,44 @@ fun SettingsSheet(
                 }
             }
 
+            Spacer(Modifier.height(14.dp))
+
+            // 低余额预警通知开关
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onLowBalanceNotificationChange(!isLowBalanceNotificationEnabled) }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "低余额预警系统通知",
+                        color = palette.primaryInk,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "余额跌破阈值时推送系统告警（24小时内防打扰去重）",
+                        color = palette.secondaryInk,
+                        fontSize = 11.sp,
+                    )
+                }
+                Switch(
+                    checked = isLowBalanceNotificationEnabled,
+                    onCheckedChange = onLowBalanceNotificationChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = palette.onAccent,
+                        checkedTrackColor = palette.accent,
+                        uncheckedThumbColor = palette.secondaryInk,
+                        uncheckedTrackColor = palette.chipFill,
+                        uncheckedBorderColor = palette.hairline,
+                    )
+                )
+            }
+
             Spacer(Modifier.height(24.dp))
             Box(
                 Modifier
@@ -344,6 +386,44 @@ fun SettingsSheet(
                         )
                     }
                 }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // 桌面小组件隐私脱敏模式开关
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onPrivacyModeChange(!isPrivacyModeEnabled) }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "桌面小组件隐私脱敏模式",
+                        color = palette.primaryInk,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "小组件默认隐藏具体金额（展示为 ¥••••），轻触眼睛图标临时明文展示 5 秒",
+                        color = palette.secondaryInk,
+                        fontSize = 11.sp,
+                    )
+                }
+                Switch(
+                    checked = isPrivacyModeEnabled,
+                    onCheckedChange = onPrivacyModeChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = palette.onAccent,
+                        checkedTrackColor = palette.accent,
+                        uncheckedThumbColor = palette.secondaryInk,
+                        uncheckedTrackColor = palette.chipFill,
+                        uncheckedBorderColor = palette.hairline,
+                    )
+                )
             }
 
             Spacer(Modifier.height(24.dp))

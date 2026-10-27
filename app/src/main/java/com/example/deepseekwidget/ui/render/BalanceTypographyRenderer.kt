@@ -88,9 +88,16 @@ object BalanceTypographyRenderer {
         maxWidthPx: Int = Int.MAX_VALUE,
         maxHeightPx: Int = Int.MAX_VALUE,
     ): Bitmap {
+        val isMasked = balanceStr.contains("•") || balanceStr.contains("*")
         val parts = balanceStr.split(".")
-        val intPart = parts.getOrNull(0)?.ifEmpty { "0" } ?: "0"
-        val decPart = if (parts.size > 1) ".${parts[1]}" else ".00"
+        val intPart = parts.getOrNull(0)?.ifEmpty { if (isMasked) balanceStr else "0" } ?: if (isMasked) balanceStr else "0"
+        val decPart = if (parts.size > 1) {
+            ".${parts[1]}"
+        } else if (isMasked || balanceStr == "—" || balanceStr == "--" || balanceStr == "--.--") {
+            ""
+        } else {
+            ".00"
+        }
 
         val artisticTypeface = getArtisticTypeface(context)
         val density = context.resources.displayMetrics.density
