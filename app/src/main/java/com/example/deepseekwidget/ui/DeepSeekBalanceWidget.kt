@@ -233,7 +233,7 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
         val verticalPadding = when {
             compactHeight -> if (size.height < 70.dp) 6.dp else 8.dp
             isVeryTall -> 16.dp
-            isNarrow -> 8.dp
+            isNarrow -> 10.dp
             else -> 12.dp
         }
 
@@ -260,7 +260,7 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
             }
             else -> {
                 // 中等高度 (2×2, 3×2)
-                if (isNarrow) 28f else 42f
+                if (isNarrow) 36f else 44f
             }
         }
 
@@ -269,7 +269,7 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
         val heightBudgetDp = when {
             compactHeight -> (size.height - headerHeight - verticalPadding * 2 - 2.dp).coerceAtLeast(18.dp)
             isVeryTall -> (size.height * 0.30f).coerceAtLeast(44.dp)
-            isNarrow -> (size.height - 80.dp - verticalPadding * 2).coerceIn(16.dp, 30.dp)
+            isNarrow -> (size.height - 66.dp - verticalPadding * 2).coerceIn(26.dp, 44.dp)
             else -> (size.height - 68.dp - verticalPadding * 2).coerceAtLeast(28.dp)
         }
 
@@ -359,12 +359,12 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                             ),
                             modifier = GlanceModifier.padding(end = 6.dp)
                         )
-                    } else if (!compactHeight && !isNarrow) {
+                    } else if (!compactHeight) {
                         Text(
                             text = if (isLoading) "Syncing..." else updatedAt,
                             style = TextStyle(
-                                color = ColorProvider(R.color.muted_ink),
-                                fontSize = 10.sp
+                                color = if (isLoading) ColorProvider(R.color.accent_deepseek) else ColorProvider(R.color.muted_ink),
+                                fontSize = if (isNarrow) 9.sp else 10.sp
                             ),
                             modifier = GlanceModifier.padding(end = 6.dp)
                         )
@@ -578,22 +578,22 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                         // 模仿参考图：在余额下方展示「可用余额 👁」脱敏开关
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = GlanceModifier.padding(top = 1.dp)
+                            modifier = GlanceModifier.padding(top = 2.dp)
                         ) {
                             Text(
                                 text = "可用余额",
                                 style = TextStyle(
                                     color = ColorProvider(R.color.secondary_ink),
-                                    fontSize = if (isNarrow) 9.sp else 10.sp,
+                                    fontSize = if (isNarrow) 9.5.sp else 10.5.sp,
                                     fontWeight = FontWeight.Normal
                                 )
                             )
-                            Spacer(modifier = GlanceModifier.width(3.dp))
+                            Spacer(modifier = GlanceModifier.width(4.dp))
                             Image(
                                 provider = ImageProvider(if (isMasked) R.drawable.ic_eye_closed else R.drawable.ic_eye_open),
                                 contentDescription = if (isMasked) "Reveal Balance" else "Mask Balance",
                                 colorFilter = ColorFilter.tint(ColorProvider(R.color.secondary_ink)),
-                                modifier = GlanceModifier.size(11.dp)
+                                modifier = GlanceModifier.size(12.dp)
                             )
                         }
                     }
@@ -602,7 +602,7 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
 
                     if (!displayGranted.isNullOrBlank() || !displayToppedUp.isNullOrBlank()) {
                         Row(
-                            modifier = GlanceModifier.fillMaxWidth(),
+                            modifier = GlanceModifier.fillMaxWidth().padding(bottom = 2.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             if (!displayGranted.isNullOrBlank()) {
@@ -611,14 +611,14 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                                         text = "Granted",
                                         style = TextStyle(
                                             color = ColorProvider(R.color.secondary_ink),
-                                            fontSize = 8.sp
+                                            fontSize = 9.sp
                                         )
                                     )
                                     Text(
                                         text = "$symbol$displayGranted",
                                         style = TextStyle(
                                             color = ColorProvider(R.color.primary_ink),
-                                            fontSize = if (isNarrow) 10.sp else 11.sp,
+                                            fontSize = if (isNarrow) 13.5.sp else 15.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     )
@@ -634,36 +634,20 @@ class DeepSeekBalanceWidget : GlanceAppWidget() {
                                         text = "Top-up",
                                         style = TextStyle(
                                             color = ColorProvider(R.color.secondary_ink),
-                                            fontSize = 8.sp
+                                            fontSize = 9.sp
                                         )
                                     )
                                     Text(
                                         text = "$symbol$displayToppedUp",
                                         style = TextStyle(
                                             color = ColorProvider(R.color.primary_ink),
-                                            fontSize = if (isNarrow) 10.sp else 11.sp,
+                                            fontSize = if (isNarrow) 13.5.sp else 15.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     )
                                 }
                             }
                         }
-                    }
-
-                    // 2×2 底部专属状态/更新时间行：紧凑边距，彻底规避圆角遮挡与裁切
-                    Row(
-                        modifier = GlanceModifier
-                            .fillMaxWidth()
-                            .padding(top = 2.dp, bottom = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (isLoading) "● Syncing..." else "Updated $updatedAt",
-                            style = TextStyle(
-                                color = if (isLoading) ColorProvider(R.color.accent_deepseek) else ColorProvider(R.color.muted_ink),
-                                fontSize = 8.sp
-                            )
-                        )
                     }
                 }
             }

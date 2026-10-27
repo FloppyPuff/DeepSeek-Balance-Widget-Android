@@ -171,7 +171,7 @@ fun WidgetPreviewCard(
                 balanceStr = displayTotal ?: "--.--",
                 primaryColor = primaryColorInt,
                 secondaryColor = secondaryColorInt,
-                baseSizeSp = if (is2x2) 32f else 30f,
+                baseSizeSp = if (is2x2) 36f else 30f,
             )
         }
         val heroWidth = with(density) { (bitmap.width / density.density).dp }
@@ -356,13 +356,13 @@ private fun DetailLabel(
             color = palette.tertiaryInk,
             fontFamily = DisplayFontFamily,
             fontWeight = FontWeight.SemiBold,
-            fontSize = 7.sp,
+            fontSize = 8.5.sp,
             letterSpacing = 1.2.sp,
         )
         Text(
             text = value,
             color = if (muted) palette.tertiaryInk else palette.secondaryInk,
-            style = NumberStyle.copy(fontSize = 11.sp),
+            style = NumberStyle.copy(fontSize = 13.5.sp, fontWeight = FontWeight.Bold),
             maxLines = 1,
         )
     }
