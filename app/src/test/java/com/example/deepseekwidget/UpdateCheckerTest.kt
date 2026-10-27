@@ -13,15 +13,19 @@ class UpdateCheckerTest {
         // Newer versions
         assertTrue(UpdateChecker.isNewerVersion("1.3.0", "1.3.1"))
         assertTrue(UpdateChecker.isNewerVersion("1.3.0", "1.4.0"))
+        assertTrue(UpdateChecker.isNewerVersion("1.3.4", "1.3.5"))
         assertTrue(UpdateChecker.isNewerVersion("1.3.0", "2.0.0"))
         assertTrue(UpdateChecker.isNewerVersion("v1.3.0", "v1.3.1"))
         assertTrue(UpdateChecker.isNewerVersion("1.3", "1.3.1"))
 
         // Equal versions
+        assertFalse(UpdateChecker.isNewerVersion("1.3.4", "1.3.4"))
+        assertFalse(UpdateChecker.isNewerVersion("v1.3.4", "1.3.4"))
         assertFalse(UpdateChecker.isNewerVersion("1.3.0", "1.3.0"))
         assertFalse(UpdateChecker.isNewerVersion("v1.3.0", "1.3.0"))
 
         // Older versions
+        assertFalse(UpdateChecker.isNewerVersion("1.3.5", "1.3.4"))
         assertFalse(UpdateChecker.isNewerVersion("1.3.1", "1.3.0"))
         assertFalse(UpdateChecker.isNewerVersion("2.0.0", "1.9.9"))
     }

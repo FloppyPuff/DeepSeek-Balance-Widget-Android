@@ -36,7 +36,8 @@ data class MainUiState(
     val customThresholdInput: String = "5",
     val syncIntervalMinutes: Long = 60L,
     val previewIs2x2: Boolean = true,
-    val themeMode: ThemeMode = ThemeMode.SYSTEM
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val autoCheckUpdateEnabled: Boolean = true
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -60,6 +61,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val threshold = SecureKeyStore.getLowBalanceThreshold(context)
         val interval = SecureKeyStore.getSyncIntervalMinutes(context)
         val themeMode = SecureKeyStore.getThemeMode(context)
+        val autoCheckUpdate = SecureKeyStore.isAutoCheckUpdateEnabled(context)
         val isConfigured = key.isNotBlank()
         val formattedThreshold = if (threshold % 1f == 0f) threshold.toInt().toString() else threshold.toString()
 
@@ -73,7 +75,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 lowBalanceThreshold = threshold,
                 customThresholdInput = formattedThreshold,
                 syncIntervalMinutes = interval,
-                themeMode = themeMode
+                themeMode = themeMode,
+                autoCheckUpdateEnabled = autoCheckUpdate
             )
         }
 
@@ -213,20 +216,34 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun checkForUpdates(currentVersion: String) {
+    fun setAutoCheckUpdateEnabled(enabled: Boolean) {
+        val context = getApplication<Application>()
+        SecureKeyStore.setAutoCheckUpdateEnabled(context, enabled)
+        _uiState.update { it.copy(autoCheckUpdateEnabled = enabled) }
+    }
+
+    fun checkForUpdates(currentVersion: String, isAuto: Boolean = false) {
         if (_updateState.value is UpdateCheckState.Checking) return
         _updateState.value = UpdateCheckState.Checking
         viewModelScope.launch {
             UpdateChecker.checkLatestRelease(currentVersion)
                 .onSuccess { info ->
-                    _updateState.value = if (info.hasUpdate) {
-                        UpdateCheckState.HasUpdate(info)
+                    if (info.hasUpdate) {
+                        _updateState.value = UpdateCheckState.HasUpdate(info)
                     } else {
-                        UpdateCheckState.UpToDate
+                        _updateState.value = UpdateCheckState.UpToDate
+                        if (!isAuto) {
+                            _uiState.update { it.copy(successMessage = "当前已是最新版本 (v$currentVersion)") }
+                        }
                     }
                 }
                 .onFailure { err ->
-                    _updateState.value = UpdateCheckState.Error(err.localizedMessage ?: "检查更新失败")
+                    if (isAuto) {
+                        _updateState.value = UpdateCheckState.Idle
+                    } else {
+                        _updateState.value = UpdateCheckState.Error(err.localizedMessage ?: "检查更新失败")
+                        _uiState.update { it.copy(errorMessage = "检查更新失败: ${err.localizedMessage ?: "网络异常"}") }
+                    }
                 }
         }
     }

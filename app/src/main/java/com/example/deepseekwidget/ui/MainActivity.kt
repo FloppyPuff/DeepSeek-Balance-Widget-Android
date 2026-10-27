@@ -86,9 +86,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -116,6 +120,8 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+private const val DEEPSEEK_USAGE_URL = "https://platform.deepseek.com/usage"
 
 class MainActivity : ComponentActivity() {
 
@@ -170,6 +176,20 @@ fun MainScreen(viewModel: MainViewModel) {
     LaunchedEffect(uiState.isConfigured) {
         if (uiState.isConfigured) {
             checkAndRequestNotificationPermission()
+        }
+    }
+
+    // 启动时自动检测更新
+    LaunchedEffect(Unit) {
+        if (uiState.autoCheckUpdateEnabled) {
+            viewModel.checkForUpdates(BuildConfig.VERSION_NAME, isAuto = true)
+        }
+    }
+
+    // 检测到新版本时自动弹出更新说明弹窗
+    LaunchedEffect(updateState) {
+        if (updateState is UpdateCheckState.HasUpdate) {
+            showUpdateDialog = true
         }
     }
 
@@ -484,6 +504,19 @@ fun MainScreen(viewModel: MainViewModel) {
                         }
                     }
 
+                    // DeepSeek 开放平台极简跳转
+                    Spacer(Modifier.height(8.dp))
+                    DeepSeekPlatformLinkButton(
+                        onClick = {
+                            runCatching {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(DEEPSEEK_USAGE_URL))
+                                context.startActivity(intent)
+                            }.onFailure {
+                                Toast.makeText(context, "无法打开浏览器", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    )
+
 
                 }
             }
@@ -527,6 +560,8 @@ fun MainScreen(viewModel: MainViewModel) {
                 showRemoveDialog = true
             },
             updateState = updateState,
+            autoCheckUpdate = uiState.autoCheckUpdateEnabled,
+            onAutoCheckUpdateChange = { viewModel.setAutoCheckUpdateEnabled(it) },
             onCheckUpdate = { viewModel.checkForUpdates(BuildConfig.VERSION_NAME) },
             onShowUpdateDialog = { showUpdateDialog = true },
         )
@@ -951,6 +986,30 @@ private fun PrimaryActionButton(
 }
 
 @Composable
+private fun DeepSeekPlatformLinkButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val palette = LocalPalette.current
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center,
+    ) {
+        TextButton(
+            onClick = onClick,
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+        ) {
+            Text(
+                text = "${stringResource(R.string.action_open_deepseek_platform)} ↗",
+                color = palette.secondaryInk,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+    }
+}
+
+@Composable
 private fun SecondaryActionButton(
     text: String,
     onClick: () -> Unit,
@@ -978,6 +1037,48 @@ private fun SecondaryActionButton(
     }
 }
 
+private fun formatMarkdownReleaseNotes(notes: String, primaryColor: Color): AnnotatedString {
+    return buildAnnotatedString {
+        val lines = notes.lines()
+        lines.forEachIndexed { index, rawLine ->
+            val trimmed = rawLine.trim()
+            when {
+                trimmed.startsWith("### ") || trimmed.startsWith("## ") || trimmed.startsWith("# ") -> {
+                    val heading = trimmed.removePrefix("### ").removePrefix("## ").removePrefix("# ").trim()
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = primaryColor, fontSize = 12.5.sp)) {
+                        append(heading)
+                    }
+                }
+                else -> {
+                    var i = 0
+                    while (i < rawLine.length) {
+                        val startBold = rawLine.indexOf("**", i)
+                        if (startBold != -1) {
+                            append(rawLine.substring(i, startBold))
+                            val endBold = rawLine.indexOf("**", startBold + 2)
+                            if (endBold != -1) {
+                                withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = primaryColor)) {
+                                    append(rawLine.substring(startBold + 2, endBold))
+                                }
+                                i = endBold + 2
+                            } else {
+                                append(rawLine.substring(startBold))
+                                i = rawLine.length
+                            }
+                        } else {
+                            append(rawLine.substring(i))
+                            i = rawLine.length
+                        }
+                    }
+                }
+            }
+            if (index < lines.size - 1) {
+                append("\n")
+            }
+        }
+    }
+}
+
 @Composable
 private fun UpdateDialog(
     updateInfo: UpdateInfo,
@@ -985,6 +1086,9 @@ private fun UpdateDialog(
 ) {
     val palette = LocalPalette.current
     val context = LocalContext.current
+    val formattedNotes = remember(updateInfo.releaseNotes, palette.primaryInk) {
+        formatMarkdownReleaseNotes(updateInfo.releaseNotes, palette.primaryInk)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1011,27 +1115,27 @@ private fun UpdateDialog(
             Column(modifier = Modifier.fillMaxWidth()) {
                 if (updateInfo.releaseNotes.isNotBlank()) {
                     Text(
-                        text = "更新说明：",
+                        text = "更新内容：",
                         color = palette.primaryInk,
                         fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(Modifier.height(6.dp))
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 200.dp)
+                            .heightIn(max = 280.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(palette.fieldFill)
                             .border(1.dp, palette.hairline, RoundedCornerShape(10.dp))
                             .verticalScroll(rememberScrollState())
-                            .padding(10.dp)
+                            .padding(12.dp)
                     ) {
                         Text(
-                            text = updateInfo.releaseNotes,
+                            text = formattedNotes,
                             color = palette.secondaryInk,
                             fontSize = 12.sp,
-                            lineHeight = 17.sp,
+                            lineHeight = 18.sp,
                         )
                     }
                 } else {

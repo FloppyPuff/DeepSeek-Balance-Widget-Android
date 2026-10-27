@@ -18,6 +18,7 @@ object SecureKeyStore {
     private const val KEY_SYNC_INTERVAL_MINUTES = "sync_interval_minutes"
     private const val KEY_NOTIFY_LOW_BALANCE = "notify_low_balance"
     private const val KEY_THEME_MODE = "theme_mode"
+    private const val KEY_AUTO_CHECK_UPDATE = "auto_check_update"
 
     @Volatile
     private var cachedPrefs: SharedPreferences? = null
@@ -139,6 +140,20 @@ object SecureKeyStore {
         runCatching {
             getEncryptedPrefs(context).edit()
                 .putString(KEY_THEME_MODE, mode.name)
+                .apply()
+        }
+    }
+
+    fun isAutoCheckUpdateEnabled(context: Context): Boolean {
+        return runCatching {
+            getEncryptedPrefs(context).getBoolean(KEY_AUTO_CHECK_UPDATE, true)
+        }.getOrDefault(true)
+    }
+
+    fun setAutoCheckUpdateEnabled(context: Context, enabled: Boolean) {
+        runCatching {
+            getEncryptedPrefs(context).edit()
+                .putBoolean(KEY_AUTO_CHECK_UPDATE, enabled)
                 .apply()
         }
     }

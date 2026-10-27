@@ -36,6 +36,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -82,6 +84,8 @@ fun SettingsSheet(
     onDismiss: () -> Unit,
     onRemoveKeyRequest: () -> Unit,
     updateState: UpdateCheckState = UpdateCheckState.Idle,
+    autoCheckUpdate: Boolean = true,
+    onAutoCheckUpdateChange: (Boolean) -> Unit = {},
     onCheckUpdate: () -> Unit = {},
     onShowUpdateDialog: () -> Unit = {},
 ) {
@@ -385,21 +389,50 @@ fun SettingsSheet(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.version_label, BuildConfig.VERSION_NAME),
-                    color = palette.primaryInk,
-                    fontFamily = DisplayFontFamily,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 0.6.sp,
-                )
-                Spacer(Modifier.weight(1f))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.version_label, BuildConfig.VERSION_NAME),
+                        color = palette.primaryInk,
+                        fontFamily = DisplayFontFamily,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = 0.6.sp,
+                    )
+                    when (updateState) {
+                        is UpdateCheckState.UpToDate -> {
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = "已是最新版本",
+                                color = palette.tertiaryInk,
+                                fontSize = 10.5.sp,
+                            )
+                        }
+                        is UpdateCheckState.Error -> {
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = "检查失败，可点击重试",
+                                color = palette.warning,
+                                fontSize = 10.5.sp,
+                            )
+                        }
+                        else -> {}
+                    }
+                }
+
+                Spacer(Modifier.width(12.dp))
 
                 when (updateState) {
                     is UpdateCheckState.Checking -> {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(palette.chipFill)
+                                .border(1.dp, palette.hairline, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 10.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(12.dp),
+                                modifier = Modifier.size(11.dp),
                                 strokeWidth = 1.4.dp,
                                 color = palette.accent
                             )
@@ -407,7 +440,8 @@ fun SettingsSheet(
                             Text(
                                 text = "正在检查…",
                                 color = palette.tertiaryInk,
-                                fontSize = 11.sp
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
@@ -418,7 +452,7 @@ fun SettingsSheet(
                                 .background(palette.accent.copy(alpha = 0.15f))
                                 .border(1.dp, palette.accent.copy(alpha = 0.40f), RoundedCornerShape(8.dp))
                                 .clickable { onShowUpdateDialog() }
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                                .padding(horizontal = 10.dp, vertical = 5.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -433,39 +467,63 @@ fun SettingsSheet(
                             }
                         }
                     }
-                    is UpdateCheckState.UpToDate -> {
-                        Text(
-                            text = "已是最新版本",
-                            color = palette.tertiaryInk,
-                            fontSize = 11.sp
-                        )
-                    }
-                    is UpdateCheckState.Error -> {
-                        Text(
-                            text = "检查失败，重试",
-                            color = palette.warning,
-                            fontSize = 11.sp,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .clickable { onCheckUpdate() }
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
-                        )
-                    }
-                    UpdateCheckState.Idle -> {
-                        Text(
-                            text = "检查更新",
-                            color = palette.accent,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
+                    is UpdateCheckState.UpToDate, is UpdateCheckState.Error, UpdateCheckState.Idle -> {
+                        Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(palette.chipFill)
                                 .border(1.dp, palette.hairline, RoundedCornerShape(8.dp))
                                 .clickable { onCheckUpdate() }
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
+                                .padding(horizontal = 10.dp, vertical = 5.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "检查更新",
+                                color = palette.accent,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // 启动时自动检测更新开关
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onAutoCheckUpdateChange(!autoCheckUpdate) }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "启动时自动检测更新",
+                        color = palette.primaryInk,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "开启后打开软件自动检查新版本并展示更新内容",
+                        color = palette.secondaryInk,
+                        fontSize = 11.sp,
+                    )
+                }
+                Switch(
+                    checked = autoCheckUpdate,
+                    onCheckedChange = onAutoCheckUpdateChange,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = palette.onAccent,
+                        checkedTrackColor = palette.accent,
+                        uncheckedThumbColor = palette.tertiaryInk,
+                        uncheckedTrackColor = palette.chipFill,
+                        uncheckedBorderColor = palette.hairline
+                    )
+                )
             }
 
             Spacer(Modifier.height(10.dp))
