@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.4.2] - 2026-10-28
+
+### 安全引导与凭据防护升级
+- **API Key 原生安全建议卡片**：
+  - 首次启动或重新配置 API 密钥时，在输入框上方呈现「专属 Key 安全建议」卡片。
+  - 引导并建议用户前往 DeepSeek 控制台为本桌面小组件单独创建独立专属 Key（如命名为 `Widget`），杜绝因偶发风险连带生产环境主 Key。
+  - 卡片右上角集成「前往创建专属 Key ↗」快捷入口，轻触一键唤起浏览器直达 DeepSeek 凭据管理后台。
+- **视觉与图标打磨**：
+  - 新增纯 Compose Canvas 原生绘制的 `ShieldGlyph` 盾牌安全微图标，完美融入应用整体视觉风格。
+
 ## [v1.4.1] - 2026-10-27
 
 ### 排版重构与字号体验提升
