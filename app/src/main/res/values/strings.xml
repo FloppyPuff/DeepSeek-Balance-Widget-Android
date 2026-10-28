@@ -22,6 +22,9 @@
     <string name="key_save_sync">保存并同步</string>
     <string name="key_saving">保存中…</string>
     <string name="key_remove">移除 API 密钥</string>
+    <string name="api_key_security_title">专属 Key 安全建议</string>
+    <string name="api_key_security_tip">建议在 DeepSeek 控制台为本组件创建一把独立专属 Key（如命名为 Widget），切勿使用生产环境通用主 Key。独立 Key 可随时单独吊销，降低资产泄露风险。</string>
+    <string name="api_key_create_action">前往创建专属 Key ↗</string>
 
     <string name="action_sync">立即同步</string>
     <string name="action_add_widget">添加到桌面</string>

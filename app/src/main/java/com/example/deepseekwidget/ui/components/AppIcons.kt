@@ -183,3 +183,30 @@ fun ChevronRightGlyph(
         )
     }
 }
+
+@Composable
+fun ShieldGlyph(
+    tint: Color,
+    modifier: Modifier = Modifier,
+    size: Dp = 16.dp,
+) {
+    Canvas(modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val stroke = w * 0.085f
+        val shieldPath = Path().apply {
+            moveTo(w * 0.5f, h * 0.12f)
+            lineTo(w * 0.84f, h * 0.22f)
+            cubicTo(w * 0.84f, h * 0.54f, w * 0.70f, h * 0.78f, w * 0.5f, h * 0.90f)
+            cubicTo(w * 0.30f, h * 0.78f, w * 0.16f, h * 0.54f, w * 0.16f, h * 0.22f)
+            close()
+        }
+        drawPath(shieldPath, color = tint, style = Stroke(width = stroke, cap = StrokeCap.Round))
+        val checkPath = Path().apply {
+            moveTo(w * 0.36f, h * 0.50f)
+            lineTo(w * 0.47f, h * 0.62f)
+            lineTo(w * 0.65f, h * 0.38f)
+        }
+        drawPath(checkPath, color = tint, style = Stroke(width = stroke, cap = StrokeCap.Round))
+    }
+}

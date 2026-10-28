@@ -114,6 +114,7 @@ import com.example.deepseekwidget.ui.components.LockGlyph
 import com.example.deepseekwidget.ui.components.PlusGlyph
 import com.example.deepseekwidget.ui.components.RefreshGlyph
 import com.example.deepseekwidget.ui.components.SettingsSheet
+import com.example.deepseekwidget.ui.components.ShieldGlyph
 import com.example.deepseekwidget.ui.components.SlidersGlyph
 import com.example.deepseekwidget.ui.components.WidgetPreviewCard
 import com.example.deepseekwidget.ui.theme.DeepSeekTheme
@@ -411,6 +412,26 @@ fun MainScreen(viewModel: MainViewModel) {
                     }
 
                     Spacer(Modifier.height(12.dp))
+
+                    // 未配置或更换密钥时的安全建议卡片
+                    if (editingKey || !uiState.isConfigured) {
+                        ApiKeySecurityTipCard(
+                            onOpenConsole = {
+                                runCatching {
+                                    val intent = Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse("https://platform.deepseek.com/api_keys")
+                                    ).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    context.startActivity(intent)
+                                }.onFailure {
+                                    Toast.makeText(context, "无法启动浏览器打开链接", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
 
                     // API 密钥输入 / 锁定状态卡片
                     KeySection(
@@ -771,6 +792,59 @@ private fun PreviewMeta(
         Text(
             text = metaText,
             color = palette.tertiaryInk,
+            fontSize = 11.sp,
+            lineHeight = 16.sp,
+        )
+    }
+}
+
+@Composable
+private fun ApiKeySecurityTipCard(
+    onOpenConsole: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val palette = LocalPalette.current
+    val shape = RoundedCornerShape(14.dp)
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(palette.fieldFill)
+            .border(1.dp, palette.hairline, shape)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ShieldGlyph(tint = palette.accent, size = 15.dp)
+            Spacer(Modifier.width(7.dp))
+            Text(
+                text = stringResource(R.string.api_key_security_title),
+                color = palette.primaryInk,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.weight(1f))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(role = Role.Button, onClick = onOpenConsole)
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.api_key_create_action),
+                    color = palette.accent,
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = stringResource(R.string.api_key_security_tip),
+            color = palette.secondaryInk,
             fontSize = 11.sp,
             lineHeight = 16.sp,
         )
